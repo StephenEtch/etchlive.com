@@ -1336,7 +1336,25 @@ document.querySelectorAll('.feature-card, .step, .dept-pill, .anim-window').forE
 <!-- ── Auth-aware nav (swap Login → Dashboard if signed in) ── -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/supabase-init.js"></script>
-<script>updateNavAuth();</script>
+<script>
+updateNavAuth();
+// Handle Supabase auth errors/callbacks in URL hash (e.g. expired confirm links)
+(function() {
+  var hash = window.location.hash;
+  if (!hash) return;
+  var p = new URLSearchParams(hash.substring(1));
+  var err = p.get('error_description');
+  if (err) {
+    // Redirect to login with a friendly error message
+    window.location.href = '/login.html?error=' + encodeURIComponent(err);
+    return;
+  }
+  // Successful auth callback (e.g. email confirmed) — redirect to dashboard
+  if (p.get('access_token')) {
+    window.location.href = '/dashboard.html';
+  }
+})();
+</script>
 
 </body>
 </html>

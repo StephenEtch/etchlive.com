@@ -136,6 +136,16 @@
   // Open signup tab if linked from CTA (?tab=signup)
   if (params.get('tab') === 'signup') showForm('signup');
 
+  // Show auth error from redirect (e.g. expired confirmation link)
+  var errorMsg = params.get('error');
+  if (errorMsg) {
+    var friendly = decodeURIComponent(errorMsg);
+    if (friendly.toLowerCase().includes('expired')) {
+      friendly = 'That link has expired. Please sign in or request a new one.';
+    }
+    showAlert(friendly, 'error');
+  }
+
   // ── Sign In ──
   signinF.addEventListener('submit', async (e) => {
     e.preventDefault();
