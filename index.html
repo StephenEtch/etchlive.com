@@ -1068,13 +1068,14 @@ footer {
   /* ═══════════════════════════════════════════════
      CONFIGURATION — edit these to match your sequence
   ═══════════════════════════════════════════════ */
-  const FRAME_COUNT  = 152;             // total PNG frames (00000–00151)
-  const FRAME_PATH   = 'frames/';       // folder relative to index.html
-  const FRAME_PREFIX = 'Frame_';        // filename prefix (capital F)
-  const FRAME_EXT    = '.jpg';          // extension
-  const PAD_DIGITS   = 5;               // zero-pad: 00000, 00001, ... 00150
-  const RUNWAY_VH    = 4;               // scroll runway in viewport-heights (4 = 400vh extra)
-  const HERO_FADE_AT = 0.85;           // hero text starts fading in at this % of scroll
+  const FRAME_COUNT  = 152;
+  const FRAME_PATH   = 'frames/';
+  const FRAME_PREFIX = 'Frame_';
+  const FRAME_EXT    = '.jpg';
+  const PAD_DIGITS   = 5;
+  const isMobile     = window.innerWidth <= 768;
+  const RUNWAY_VH    = isMobile ? 2 : 4;   // shorter scroll on mobile = faster animation
+  const HERO_FADE_AT = 0.85;
 
   /* ═══════════════════════════════════════════════ */
 
@@ -1134,8 +1135,8 @@ footer {
 
   // Draw a frame (object-fit: cover)
   let lastDrawn = -1;
-  function drawFrame(index) {
-    if (index === lastDrawn) return;
+  function drawFrame(index, force) {
+    if (index === lastDrawn && !force) return;
     lastDrawn = index;
     const img = frames[index];
     if (!img || !img.naturalWidth) return;
@@ -1153,19 +1154,19 @@ footer {
   // Scroll handler — map scroll position to frame index
   function onScroll() {
     const rect = wrapper.getBoundingClientRect();
-    const scrolled = -rect.top;                         // how far past the top
+    const scrolled = -rect.top;
     const maxScroll = wrapper.offsetHeight - stableVH;
     const progress = Math.max(0, Math.min(1, scrolled / maxScroll));
 
-    // Map progress [0..1] → frame [0..FRAME_COUNT-1]
+    // Map progress → frame and force redraw to prevent flicker on scroll-back
     const frameIndex = Math.min(FRAME_COUNT - 1, Math.floor(progress * FRAME_COUNT));
-    drawFrame(frameIndex);
+    drawFrame(frameIndex, true);
 
-    // Fade hero text in on last ~15% of scroll; nav appears with it and stays
+    // Fade hero text smoothly
     const heroOpacity = Math.max(0, Math.min(1, (progress - HERO_FADE_AT) / (1 - HERO_FADE_AT)));
     hero.style.opacity = heroOpacity;
-    const pastFlipbook = scrolled > maxScroll;
-    if (heroOpacity > 0 || pastFlipbook) {
+    hero.style.pointerEvents = heroOpacity > 0.1 ? 'auto' : 'none';
+    if (heroOpacity > 0) {
       hero.classList.add('visible');
       navEl.classList.add('visible');
     } else {
