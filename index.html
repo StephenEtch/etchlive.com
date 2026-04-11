@@ -657,14 +657,16 @@ footer {
 
   /* Hero overlay */
   .hero-overlay { padding: 0; }
-  .hero-top { padding-top: 80px; padding-left: 20px; padding-right: 20px; }
-  .hero-bottom { padding-bottom: 40px; padding-left: 20px; padding-right: 20px; }
-  .hero-logo { font-size: clamp(48px, 14vw, 80px); }
-  .hero-tagline { font-size: clamp(16px, 4.5vw, 22px); }
-  .hero-desc { font-size: 14px; padding: 0 8px; margin-bottom: 20px; }
-  .hero-actions { flex-direction: column; align-items: center; width: 100%; }
+  .hero-top { padding-top: 60px; padding-left: 20px; padding-right: 20px; }
+  .hero-bottom { padding-bottom: 30px; padding-left: 20px; padding-right: 20px; }
+  .hero-logo { font-size: clamp(36px, 12vw, 64px); }
+  .hero-tagline { font-size: clamp(14px, 4vw, 18px); margin-top: 4px; }
+  .hero-desc { font-size: 13px; padding: 0 4px; margin-bottom: 16px; line-height: 1.5; }
+  .hero-badge { font-size: 9px; padding: 4px 12px; margin-bottom: 10px; }
+  .hero-actions { flex-direction: column; align-items: center; width: 100%; gap: 10px; }
   .hero-actions .btn-primary,
-  .hero-actions .btn-secondary { width: 100%; max-width: 280px; text-align: center; }
+  .hero-actions .btn-secondary { width: 100%; max-width: 260px; text-align: center; padding: 12px 24px; font-size: 14px; }
+  .flipbook-scroll { height: calc(100svh + var(--flipbook-runway, 800px)); }
 
   /* Grids */
   .features-grid, .steps { grid-template-columns: 1fr; }
@@ -1045,15 +1047,17 @@ footer {
 <script>
 (function() {
   /* ═══════════════════════════════════════════════
-     CONFIGURATION — edit these to match your sequence
+     CONFIGURATION
   ═══════════════════════════════════════════════ */
-  const FRAME_COUNT  = 152;             // total PNG frames (00000–00151)
-  const FRAME_PATH   = 'frames/';       // folder relative to index.html
-  const FRAME_PREFIX = 'Frame_';        // filename prefix (capital F)
-  const FRAME_EXT    = '.jpg';          // extension
-  const PAD_DIGITS   = 5;               // zero-pad: 00000, 00001, ... 00150
-  const RUNWAY_VH    = 4;               // scroll runway in viewport-heights (4 = 400vh extra)
-  const HERO_FADE_AT = 0.85;           // hero text starts fading in at this % of scroll
+  const FRAME_COUNT  = 152;
+  const FRAME_PATH   = 'frames/';
+  const FRAME_PREFIX = 'Frame_';
+  const FRAME_EXT    = '.jpg';
+  const PAD_DIGITS   = 5;
+  const RUNWAY_VH    = 4;
+  const HERO_FADE_AT = 0.85;
+  const AUTOPLAY_FPS = 30;              // frames per second for first auto-play
+  const AUTOPLAY_SCROLL_MS = 2500;      // how long the auto-scroll takes (ms)
 
   /* ═══════════════════════════════════════════════ */
 
@@ -1066,20 +1070,18 @@ footer {
   const hero    = document.getElementById('heroOverlay');
   const navEl   = document.querySelector('nav');
 
-  // Cache initial viewport height to avoid jumps when mobile address bar hides/shows
-  let stableVH = window.innerHeight;
+  // Use visualViewport for stable height on mobile, fallback to innerHeight
+  let stableVH = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  let stableWidth = window.innerWidth;
 
-  // Set scroll runway
   const runwayPx = stableVH * RUNWAY_VH;
   wrapper.style.setProperty('--flipbook-runway', runwayPx + 'px');
 
-  // Build frame URLs
   function framePath(i) {
     const num = String(i).padStart(PAD_DIGITS, '0');
     return FRAME_PATH + FRAME_PREFIX + num + FRAME_EXT;
   }
 
-  // Preload all frames into Image objects
   const frames = new Array(FRAME_COUNT);
   let loaded = 0;
 
@@ -1098,7 +1100,6 @@ footer {
     });
   }
 
-  // Size canvas to viewport (retina-aware)
   function sizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const w = window.innerWidth, h = stableVH;
@@ -1109,36 +1110,83 @@ footer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  // Draw a frame (object-fit: cover)
   let lastDrawn = -1;
   function drawFrame(index) {
     if (index === lastDrawn) return;
     lastDrawn = index;
     const img = frames[index];
     if (!img || !img.naturalWidth) return;
-
     const cw = window.innerWidth, ch = stableVH;
     const iw = img.naturalWidth, ih = img.naturalHeight;
     const scale = Math.max(cw / iw, ch / ih);
     const dw = iw * scale, dh = ih * scale;
     const dx = (cw - dw) / 2, dy = (ch - dh) / 2;
-
     ctx.clearRect(0, 0, cw, ch);
     ctx.drawImage(img, dx, dy, dw, dh);
   }
 
-  // Scroll handler — map scroll position to frame index
+  /* ── Auto-play state ── */
+  let hasAutoPlayed = false;
+  let isAutoPlaying = false;
+
+  function autoPlay() {
+    if (hasAutoPlayed || isAutoPlaying) return;
+    isAutoPlaying = true;
+    hint.classList.remove('visible');
+
+    // Animate frames at AUTOPLAY_FPS
+    let frame = 0;
+    const interval = 1000 / AUTOPLAY_FPS;
+    const maxScroll = wrapper.offsetHeight - stableVH;
+
+    function playFrame() {
+      if (frame >= FRAME_COUNT) {
+        // Animation done — smoothly scroll to end of flipbook section
+        isAutoPlaying = false;
+        hasAutoPlayed = true;
+
+        // Show hero + nav
+        hero.style.opacity = 1;
+        hero.classList.add('visible');
+        navEl.classList.add('visible');
+
+        // Smooth-scroll to the end of the flipbook so scroll position matches
+        window.scrollTo({ top: maxScroll, behavior: 'smooth' });
+
+        // Now enable normal scroll-linked behavior
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return;
+      }
+      drawFrame(frame);
+
+      // Fade hero in on last 15%
+      var progress = frame / (FRAME_COUNT - 1);
+      if (progress >= HERO_FADE_AT) {
+        var heroOpacity = (progress - HERO_FADE_AT) / (1 - HERO_FADE_AT);
+        hero.style.opacity = heroOpacity;
+        hero.classList.add('visible');
+        navEl.classList.add('visible');
+      }
+
+      frame++;
+      requestAnimationFrame(function() {
+        setTimeout(playFrame, interval);
+      });
+    }
+
+    playFrame();
+  }
+
+  /* ── Normal scroll handler (active after auto-play) ── */
   function onScroll() {
     const rect = wrapper.getBoundingClientRect();
-    const scrolled = -rect.top;                         // how far past the top
+    const scrolled = -rect.top;
     const maxScroll = wrapper.offsetHeight - stableVH;
     const progress = Math.max(0, Math.min(1, scrolled / maxScroll));
 
-    // Map progress [0..1] → frame [0..FRAME_COUNT-1]
     const frameIndex = Math.min(FRAME_COUNT - 1, Math.floor(progress * FRAME_COUNT));
     drawFrame(frameIndex);
 
-    // Fade hero text in on last ~15% of scroll; nav appears with it and stays
     const heroOpacity = Math.max(0, Math.min(1, (progress - HERO_FADE_AT) / (1 - HERO_FADE_AT)));
     hero.style.opacity = heroOpacity;
     const pastFlipbook = scrolled > maxScroll;
@@ -1150,19 +1198,46 @@ footer {
       navEl.classList.remove('visible');
     }
 
-    // Hide scroll hint once user scrolls
     if (progress > 0.02) hint.classList.remove('visible');
     else hint.classList.add('visible');
   }
 
-  // Init
+  /* ── First-scroll detector ── */
+  function onFirstScroll() {
+    if (hasAutoPlayed || isAutoPlaying) return;
+    // Remove this listener — auto-play takes over
+    window.removeEventListener('scroll', onFirstScroll);
+    window.removeEventListener('wheel', onFirstWheel);
+    window.removeEventListener('touchmove', onFirstTouch);
+    // Lock scroll position during auto-play
+    window.scrollTo(0, 0);
+    autoPlay();
+  }
+
+  function onFirstWheel(e) {
+    if (hasAutoPlayed || isAutoPlaying) return;
+    if (e.deltaY > 0) { // only trigger on scroll down
+      e.preventDefault();
+      onFirstScroll();
+    }
+  }
+
+  function onFirstTouch(e) {
+    if (hasAutoPlayed || isAutoPlaying) return;
+    onFirstScroll();
+  }
+
+  /* ── Init ── */
   sizeCanvas();
+
   window.addEventListener('resize', () => {
-    // Only update stableVH on significant height changes (rotation, not address bar)
-    const diff = Math.abs(window.innerHeight - stableVH);
-    if (diff > 100 || window.innerWidth !== canvas.style.width.replace('px','') * 1) {
-      stableVH = window.innerHeight;
-      const newRunway = stableVH * RUNWAY_VH;
+    // Only update stableVH on significant changes (rotation), not address bar
+    var widthChanged = Math.abs(window.innerWidth - stableWidth) > 50;
+    var heightChanged = Math.abs(window.innerHeight - stableVH) > 100;
+    if (widthChanged || heightChanged) {
+      stableVH = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+      stableWidth = window.innerWidth;
+      var newRunway = stableVH * RUNWAY_VH;
       wrapper.style.setProperty('--flipbook-runway', newRunway + 'px');
     }
     sizeCanvas();
@@ -1173,8 +1248,11 @@ footer {
     loader.classList.add('loaded');
     hint.classList.add('visible');
     drawFrame(0);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // initial position
+
+    // Listen for first scroll/touch to trigger auto-play
+    window.addEventListener('wheel', onFirstWheel, { passive: false });
+    window.addEventListener('touchmove', onFirstTouch, { passive: true });
+    window.addEventListener('scroll', onFirstScroll, { passive: true });
   });
 })();
 </script>
