@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Etch</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav class="app-nav">
+  <div class="app-nav-inner">
+    <a href="/" class="app-nav-logo">Etch</a>
+    <div class="app-nav-links">
+      <a href="/#features">Features</a>
+      <a href="/#how">How It Works</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Auth form ── -->
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="signin">Sign In</button>
+      <button class="auth-tab" data-tab="signup">Sign Up</button>
+    </div>
+
+    <!-- Alert -->
+    <div id="authAlert" class="alert"></div>
+
+    <!-- Sign In form -->
+    <form id="signinForm">
+      <div class="form-group">
+        <label class="form-label" for="si-email">Email</label>
+        <input class="form-input" type="email" id="si-email" placeholder="you@production.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="si-password">Password</label>
+        <input class="form-input" type="password" id="si-password" placeholder="Your password" required autocomplete="current-password">
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:20px;">
+        <button type="button" class="btn-link" id="forgotBtn">Forgot password?</button>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="signinBtn">Sign In</button>
+    </form>
+
+    <!-- Sign Up form -->
+    <form id="signupForm" style="display:none;">
+      <div class="form-group">
+        <label class="form-label" for="su-name">Display Name</label>
+        <input class="form-input" type="text" id="su-name" placeholder="Your name" required autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="su-email">Email</label>
+        <input class="form-input" type="email" id="su-email" placeholder="you@production.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="su-password">Password</label>
+        <input class="form-input" type="password" id="su-password" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="su-confirm">Confirm Password</label>
+        <input class="form-input" type="password" id="su-confirm" placeholder="Repeat password" required minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="signupBtn">Create Account</button>
+    </form>
+
+    <!-- Forgot Password form -->
+    <form id="forgotForm" style="display:none;">
+      <h1>Reset Password</h1>
+      <p class="subtitle">Enter your email and we'll send a reset link.</p>
+      <div class="form-group">
+        <label class="form-label" for="fp-email">Email</label>
+        <input class="form-input" type="email" id="fp-email" placeholder="you@production.com" required autocomplete="email">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="resetBtn">Send Reset Link</button>
+      <div style="text-align:center; margin-top:16px;">
+        <button type="button" class="btn-link" id="backToLogin">Back to sign in</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Supabase ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-init.js"></script>
+<script>
+(function() {
+  const tabs      = document.querySelectorAll('.auth-tab');
+  const signinF   = document.getElementById('signinForm');
+  const signupF   = document.getElementById('signupForm');
+  const forgotF   = document.getElementById('forgotForm');
+  const alertEl   = document.getElementById('authAlert');
+  const tabBar    = document.querySelector('.auth-tabs');
+
+  // URL params
+  const params   = new URLSearchParams(window.location.search);
+  const redirect = params.get('redirect') || '/dashboard.html';
+
+  // If already logged in, go to dashboard
+  getSession().then(s => { if (s) window.location.href = redirect; });
+
+  // ── Helpers ──
+  function showAlert(msg, type) {
+    alertEl.textContent = msg;
+    alertEl.className = 'alert visible alert-' + type;
+  }
+  function hideAlert() {
+    alertEl.className = 'alert';
+  }
+  function setLoading(btn, loading) {
+    btn.disabled = loading;
+    btn.dataset.origText = btn.dataset.origText || btn.textContent;
+    btn.textContent = loading ? 'Please wait...' : btn.dataset.origText;
+  }
+
+  // ── Tab switching ──
+  function showForm(name) {
+    hideAlert();
+    signinF.style.display = name === 'signin' ? '' : 'none';
+    signupF.style.display = name === 'signup' ? '' : 'none';
+    forgotF.style.display = name === 'forgot' ? '' : 'none';
+    tabBar.style.display  = name === 'forgot' ? 'none' : '';
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => showForm(t.dataset.tab)));
+  document.getElementById('forgotBtn').addEventListener('click', () => showForm('forgot'));
+  document.getElementById('backToLogin').addEventListener('click', () => showForm('signin'));
+
+  // Open signup tab if linked from CTA (?tab=signup)
+  if (params.get('tab') === 'signup') showForm('signup');
+
+  // ── Sign In ──
+  signinF.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+    const btn   = document.getElementById('signinBtn');
+    const email = document.getElementById('si-email').value.trim();
+    const pass  = document.getElementById('si-password').value;
+
+    setLoading(btn, true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    setLoading(btn, false);
+
+    if (error) {
+      showAlert(error.message, 'error');
+      return;
+    }
+    window.location.href = redirect;
+  });
+
+  // ── Sign Up ──
+  signupF.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+    const btn     = document.getElementById('signupBtn');
+    const name    = document.getElementById('su-name').value.trim();
+    const email   = document.getElementById('su-email').value.trim();
+    const pass    = document.getElementById('su-password').value;
+    const confirm = document.getElementById('su-confirm').value;
+
+    if (pass !== confirm) {
+      showAlert('Passwords do not match.', 'error');
+      return;
+    }
+
+    setLoading(btn, true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: pass,
+      options: { data: { display_name: name } }
+    });
+    setLoading(btn, false);
+
+    if (error) {
+      showAlert(error.message, 'error');
+      return;
+    }
+
+    // If email confirmation is required
+    if (data.user && !data.session) {
+      showAlert('Account created! Check your email to confirm, then sign in.', 'success');
+      // Update profile with display name
+      return;
+    }
+
+    // If auto-confirmed (e.g. email confirmation disabled)
+    if (data.session) {
+      // Update profile name
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        name: name,
+        email: email,
+      });
+      window.location.href = redirect;
+    }
+  });
+
+  // ── Forgot Password ──
+  forgotF.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+    const btn   = document.getElementById('resetBtn');
+    const email = document.getElementById('fp-email').value.trim();
+
+    setLoading(btn, true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/account.html?reset=true',
+    });
+    setLoading(btn, false);
+
+    if (error) {
+      showAlert(error.message, 'error');
+      return;
+    }
+    showAlert('Reset link sent! Check your email.', 'success');
+  });
+})();
+</script>
+</body>
+</html>

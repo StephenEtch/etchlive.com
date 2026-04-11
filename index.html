@@ -705,7 +705,7 @@ footer {
       <a href="#features">Features</a>
       <a href="#how">How It Works</a>
       <a href="#departments">Departments</a>
-      <a href="#cta" class="nav-cta">Get Early Access</a>
+      <a href="/login.html" class="nav-cta" data-auth-link>Login</a>
     </div>
   </div>
 </nav>
@@ -982,7 +982,10 @@ footer {
   <div class="container">
     <div class="section-label">Early access</div>
     <div class="section-title">Ready to ditch the spreadsheet?</div>
-    <div class="section-desc">Etch is currently in closed beta. Drop your email and we'll get you in.</div>
+    <div class="section-desc">Etch is currently in closed beta. Drop your email and we'll get you in, or sign up now.</div>
+    <div style="margin-bottom:20px;">
+      <a href="/login.html?tab=signup" class="btn-primary" style="display:inline-block; padding:14px 32px; border-radius:10px; font-size:15px; font-weight:600; color:#0c0a08; text-decoration:none;">Sign Up Free</a>
+    </div>
     <form id="etch-signup" action="https://formspree.io/f/meepyeag" method="POST" style="display:flex; gap:12px; max-width:440px; margin:0 auto;">
       <input type="email" name="email" placeholder="you@production.com" required style="
         flex:1; padding:14px 18px; border-radius:10px;
@@ -1030,6 +1033,8 @@ footer {
       <a href="#features">Features</a>
       <a href="#how">How It Works</a>
       <a href="#departments">Departments</a>
+      <a href="/login.html">Login</a>
+      <a href="/dashboard.html">Dashboard</a>
       <a href="mailto:stephen@etchlive.com">Contact</a>
     </div>
     <div class="footer-copy">&copy; 2026 Etch. All rights reserved. Founded by Stephen Hedges.</div>
@@ -1327,6 +1332,11 @@ document.querySelectorAll('.feature-card, .step, .dept-pill, .anim-window').forE
   io.observe(el);
 });
 </script>
+
+<!-- ── Auth-aware nav (swap Login → Dashboard if signed in) ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-init.js"></script>
+<script>updateNavAuth();</script>
 
 </body>
 </html>

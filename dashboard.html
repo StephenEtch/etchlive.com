@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Etch</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav class="app-nav">
+  <div class="app-nav-inner">
+    <a href="/" class="app-nav-logo">Etch</a>
+    <div class="app-nav-links">
+      <a href="/account.html">Account</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Dashboard ── -->
+<div class="page-container">
+
+  <!-- Greeting -->
+  <div class="greeting">
+    <h1 id="greetingText">Welcome back</h1>
+    <p id="greetingEmail"></p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stat-row" id="statsRow">
+    <div class="stat-chip"><span class="stat-value" id="statOrgs">0</span> Organizations</div>
+    <div class="stat-chip"><span class="stat-value" id="statProjects">0</span> Projects</div>
+    <div class="stat-chip"><span class="stat-value" id="statSessions">0</span> Sessions</div>
+  </div>
+
+  <!-- Organizations -->
+  <div>
+    <div class="section-header">
+      <div>
+        <div class="section-label">Organizations</div>
+        <div class="section-title">Your teams</div>
+      </div>
+      <button class="btn btn-secondary" id="createOrgBtn">+ New Organization</button>
+    </div>
+    <div class="card-grid" id="orgsGrid"></div>
+    <div class="empty-state" id="orgsEmpty" style="display:none;">
+      <p>You haven't created or joined any organizations yet.</p>
+      <button class="btn btn-primary" id="createOrgBtn2">Create Organization</button>
+    </div>
+  </div>
+
+  <!-- Projects -->
+  <div>
+    <div class="section-header">
+      <div>
+        <div class="section-label">Projects</div>
+        <div class="section-title">Your shows</div>
+      </div>
+      <button class="btn btn-secondary" id="createProjectBtn">+ New Project</button>
+    </div>
+    <div class="card-grid" id="projectsGrid"></div>
+    <div class="empty-state" id="projectsEmpty" style="display:none;">
+      <p>No projects yet. Create an organization first, then add a project.</p>
+    </div>
+  </div>
+
+  <!-- Recent Sessions -->
+  <div>
+    <div class="section-header">
+      <div>
+        <div class="section-label">Sessions</div>
+        <div class="section-title">Recent sessions</div>
+      </div>
+    </div>
+    <div class="card-grid" id="sessionsGrid"></div>
+    <div class="empty-state" id="sessionsEmpty" style="display:none;">
+      <p>No sessions yet. Sessions are created from the Etch desktop app.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Create Organization Modal ── -->
+<div class="modal-overlay" id="orgModal">
+  <div class="modal">
+    <h3>Create Organization</h3>
+    <p>An organization groups your team and projects together.</p>
+    <form id="orgForm">
+      <div class="form-group">
+        <label class="form-label" for="orgName">Organization Name</label>
+        <input class="form-input" type="text" id="orgName" placeholder="e.g. Bright Sparks Production" required>
+      </div>
+      <div id="orgAlert" class="alert"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="orgCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="orgSubmit">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Create Project Modal ── -->
+<div class="modal-overlay" id="projectModal">
+  <div class="modal">
+    <h3>Create Project</h3>
+    <p>A project represents a show or production.</p>
+    <form id="projectForm">
+      <div class="form-group">
+        <label class="form-label" for="projectOrg">Organization</label>
+        <select class="form-input" id="projectOrg" required>
+          <option value="">Select an organization...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="projectName">Project Name</label>
+        <input class="form-input" type="text" id="projectName" placeholder="e.g. Fred Again – O2 Arena" required>
+      </div>
+      <div id="projectAlert" class="alert"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="projectCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="projectSubmit">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<footer class="app-footer">&copy; 2026 Etch. All rights reserved.</footer>
+
+<!-- ── Supabase ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-init.js"></script>
+<script src="js/auth-guard.js"></script>
+<script>
+(async function() {
+  // ── Auth ──
+  const user = await getUser();
+  if (!user) return; // auth-guard handles redirect
+
+  const profile = await getProfile(user.id);
+  const displayName = profile?.name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'there';
+
+  document.getElementById('greetingText').textContent = 'Welcome back, ' + displayName;
+  document.getElementById('greetingEmail').textContent = user.email;
+
+  document.getElementById('logoutBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    signOut();
+  });
+
+  // ── Load data ──
+  let orgs = [];
+  let projects = [];
+  let sessions = [];
+
+  async function loadOrgs() {
+    const { data } = await supabase
+      .from('org_members')
+      .select('org_id, role, organizations(id, name, created_at)')
+      .eq('user_id', user.id);
+    orgs = (data || []).map(d => ({ ...d.organizations, role: d.role }));
+    return orgs;
+  }
+
+  async function loadProjects() {
+    if (!orgs.length) { projects = []; return []; }
+    const orgIds = orgs.map(o => o.id);
+    const { data } = await supabase
+      .from('projects')
+      .select('*')
+      .in('org_id', orgIds)
+      .order('created_at', { ascending: false });
+    projects = data || [];
+    return projects;
+  }
+
+  async function loadSessions() {
+    const { data } = await supabase
+      .from('session_members')
+      .select('session_id, sessions(id, label, invite_code, created_at, project_id, projects(name))')
+      .eq('user_id', user.id)
+      .order('session_id', { ascending: false })
+      .limit(10);
+    sessions = (data || []).map(d => d.sessions).filter(Boolean);
+    return sessions;
+  }
+
+  // ── Render ──
+  function renderOrgs() {
+    const grid = document.getElementById('orgsGrid');
+    const empty = document.getElementById('orgsEmpty');
+    grid.innerHTML = '';
+    if (!orgs.length) { empty.style.display = ''; grid.style.display = 'none'; return; }
+    empty.style.display = 'none'; grid.style.display = '';
+    orgs.forEach(o => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<div class="card-title">' + esc(o.name) + '</div>' +
+        '<div class="card-meta">Role: ' + esc(o.role) + ' &middot; Created ' + fmtDate(o.created_at) + '</div>';
+      grid.appendChild(card);
+    });
+  }
+
+  function renderProjects() {
+    const grid = document.getElementById('projectsGrid');
+    const empty = document.getElementById('projectsEmpty');
+    grid.innerHTML = '';
+    if (!projects.length) { empty.style.display = ''; grid.style.display = 'none'; return; }
+    empty.style.display = 'none'; grid.style.display = '';
+    projects.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<div class="card-title">' + esc(p.name) + '</div>' +
+        '<div class="card-meta">Created ' + fmtDate(p.created_at) + '</div>';
+      grid.appendChild(card);
+    });
+  }
+
+  function renderSessions() {
+    const grid = document.getElementById('sessionsGrid');
+    const empty = document.getElementById('sessionsEmpty');
+    grid.innerHTML = '';
+    if (!sessions.length) { empty.style.display = ''; grid.style.display = 'none'; return; }
+    empty.style.display = 'none'; grid.style.display = '';
+    sessions.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<div class="card-title">' + esc(s.label || 'Session') + '</div>' +
+        '<div class="card-meta">' + esc(s.projects?.name || '') + '</div>' +
+        (s.invite_code ? '<div class="invite-code" style="margin-top:10px;">' + esc(s.invite_code) + '</div>' : '');
+      grid.appendChild(card);
+    });
+  }
+
+  function updateStats() {
+    document.getElementById('statOrgs').textContent = orgs.length;
+    document.getElementById('statProjects').textContent = projects.length;
+    document.getElementById('statSessions').textContent = sessions.length;
+  }
+
+  // ── Initial load ──
+  await loadOrgs();
+  await Promise.all([loadProjects(), loadSessions()]);
+  renderOrgs();
+  renderProjects();
+  renderSessions();
+  updateStats();
+
+  // ── Modals ──
+  function openModal(id) { document.getElementById(id).classList.add('visible'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('visible'); }
+
+  // Create Org
+  document.getElementById('createOrgBtn').addEventListener('click', () => openModal('orgModal'));
+  document.getElementById('createOrgBtn2')?.addEventListener('click', () => openModal('orgModal'));
+  document.getElementById('orgCancel').addEventListener('click', () => closeModal('orgModal'));
+
+  document.getElementById('orgForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('orgName').value.trim();
+    const btn = document.getElementById('orgSubmit');
+    const alert = document.getElementById('orgAlert');
+    btn.disabled = true; btn.textContent = 'Creating...';
+    alert.className = 'alert';
+
+    const { data: org, error } = await supabase
+      .from('organizations').insert({ name }).select().single();
+
+    if (error) {
+      alert.textContent = error.message;
+      alert.className = 'alert visible alert-error';
+      btn.disabled = false; btn.textContent = 'Create';
+      return;
+    }
+
+    await supabase.from('org_members').insert({
+      org_id: org.id, user_id: user.id, role: 'owner',
+    });
+
+    closeModal('orgModal');
+    document.getElementById('orgName').value = '';
+    btn.disabled = false; btn.textContent = 'Create';
+
+    await loadOrgs();
+    renderOrgs();
+    updateStats();
+    populateOrgSelect();
+  });
+
+  // Create Project
+  function populateOrgSelect() {
+    const sel = document.getElementById('projectOrg');
+    sel.innerHTML = '<option value="">Select an organization...</option>';
+    orgs.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.id; opt.textContent = o.name;
+      sel.appendChild(opt);
+    });
+  }
+  populateOrgSelect();
+
+  document.getElementById('createProjectBtn').addEventListener('click', () => {
+    if (!orgs.length) { openModal('orgModal'); return; }
+    openModal('projectModal');
+  });
+  document.getElementById('projectCancel').addEventListener('click', () => closeModal('projectModal'));
+
+  document.getElementById('projectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const orgId = document.getElementById('projectOrg').value;
+    const name  = document.getElementById('projectName').value.trim();
+    const btn   = document.getElementById('projectSubmit');
+    const alert = document.getElementById('projectAlert');
+    btn.disabled = true; btn.textContent = 'Creating...';
+    alert.className = 'alert';
+
+    const { error } = await supabase
+      .from('projects').insert({ org_id: orgId, name, created_by: user.id });
+
+    if (error) {
+      alert.textContent = error.message;
+      alert.className = 'alert visible alert-error';
+      btn.disabled = false; btn.textContent = 'Create';
+      return;
+    }
+
+    closeModal('projectModal');
+    document.getElementById('projectName').value = '';
+    btn.disabled = false; btn.textContent = 'Create';
+
+    await loadProjects();
+    renderProjects();
+    updateStats();
+  });
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target === el) el.classList.remove('visible');
+    });
+  });
+
+  // ── Utilities ──
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+})();
+</script>
+</body>
+</html>

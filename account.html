@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Settings — Etch</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav class="app-nav">
+  <div class="app-nav-inner">
+    <a href="/" class="app-nav-logo">Etch</a>
+    <div class="app-nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="#" id="logoutBtn">Log Out</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Account Settings ── -->
+<div class="page-container">
+  <div class="page-title">Account Settings</div>
+  <div class="page-subtitle">Manage your profile, security, and account.</div>
+
+  <!-- ── Profile ── -->
+  <div class="settings-section">
+    <h2>Profile</h2>
+    <p class="section-desc">This is how you appear to other team members in Etch.</p>
+    <form id="profileForm">
+      <div class="form-input-row">
+        <div class="form-group">
+          <label class="form-label" for="profileName">Display Name</label>
+          <input class="form-input" type="text" id="profileName" placeholder="Your name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="profileDept">Default Department</label>
+          <select class="form-input" id="profileDept">
+            <option value="gen">General</option>
+            <option value="lx">Lighting</option>
+            <option value="aud">Audio</option>
+            <option value="vid">Video</option>
+            <option value="aut">Automation</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="profileEmail">Email</label>
+        <input class="form-input" type="email" id="profileEmail" disabled style="opacity:0.5;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Avatar Color</label>
+        <div class="color-swatches" id="colorSwatches"></div>
+        <input type="hidden" id="profileColor" value="">
+      </div>
+      <div id="profileAlert" class="alert"></div>
+      <div class="settings-actions">
+        <button type="submit" class="btn btn-primary" id="profileSave">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Password ── -->
+  <div class="settings-section">
+    <h2>Change Password</h2>
+    <p class="section-desc">Update your account password.</p>
+    <form id="passwordForm">
+      <div class="form-group">
+        <label class="form-label" for="newPassword">New Password</label>
+        <input class="form-input" type="password" id="newPassword" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="confirmPassword">Confirm New Password</label>
+        <input class="form-input" type="password" id="confirmPassword" placeholder="Repeat new password" required minlength="8" autocomplete="new-password">
+      </div>
+      <div id="passwordAlert" class="alert"></div>
+      <div class="settings-actions">
+        <button type="submit" class="btn btn-primary" id="passwordSave">Update Password</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Danger Zone ── -->
+  <div class="settings-section danger">
+    <h2>Danger Zone</h2>
+    <p class="section-desc">Permanently delete your account and all associated data. This action cannot be undone.</p>
+    <button class="btn btn-danger" id="deleteAccountBtn">Delete Account</button>
+  </div>
+</div>
+
+<!-- ── Delete Account Modal ── -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete your account?</h3>
+    <p>This will permanently remove your account, profile, and all data. This cannot be undone. Type <strong>DELETE</strong> to confirm.</p>
+    <div class="form-group">
+      <input class="form-input" type="text" id="deleteConfirm" placeholder="Type DELETE to confirm" autocomplete="off">
+    </div>
+    <div id="deleteAlert" class="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="deleteCancel">Cancel</button>
+      <button class="btn btn-danger" id="deleteSubmit" disabled>Delete My Account</button>
+    </div>
+  </div>
+</div>
+
+<footer class="app-footer">&copy; 2026 Etch. All rights reserved.</footer>
+
+<!-- ── Supabase ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-init.js"></script>
+<script src="js/auth-guard.js"></script>
+<script>
+(async function() {
+  const user = await getUser();
+  if (!user) return;
+
+  const profile = await getProfile(user.id);
+
+  // ── Logout ──
+  document.getElementById('logoutBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    signOut();
+  });
+
+  // ── Populate profile form ──
+  document.getElementById('profileName').value = profile?.name || user.user_metadata?.display_name || '';
+  document.getElementById('profileDept').value = profile?.default_role || 'gen';
+  document.getElementById('profileEmail').value = user.email || '';
+
+  // Color swatches
+  const COLORS = [
+    '#e05a2b', '#4a90d9', '#7b5ea7', '#2a9d5c', '#d4a017',
+    '#e06090', '#3abba0', '#c0783a', '#6b7280', '#d45050',
+  ];
+  const swatchContainer = document.getElementById('colorSwatches');
+  const colorInput = document.getElementById('profileColor');
+  const currentColor = profile?.avatar_color || COLORS[0];
+  colorInput.value = currentColor;
+
+  COLORS.forEach(c => {
+    const swatch = document.createElement('div');
+    swatch.className = 'color-swatch';
+    swatch.style.background = c;
+    if (c === currentColor) swatch.style.borderColor = 'var(--accent)';
+    swatch.addEventListener('click', () => {
+      colorInput.value = c;
+      swatchContainer.querySelectorAll('.color-swatch').forEach(s => s.style.borderColor = 'var(--border)');
+      swatch.style.borderColor = 'var(--accent)';
+    });
+    swatchContainer.appendChild(swatch);
+  });
+
+  // ── Handle password reset redirect ──
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('reset') === 'true') {
+    // Supabase sets the session via the URL hash on password reset redirect
+    // The user is now logged in and can set a new password
+    const pwAlert = document.getElementById('passwordAlert');
+    pwAlert.textContent = 'You can now set your new password below.';
+    pwAlert.className = 'alert visible alert-info';
+    document.getElementById('newPassword').focus();
+  }
+
+  // ── Save profile ──
+  document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn   = document.getElementById('profileSave');
+    const alert = document.getElementById('profileAlert');
+    const name  = document.getElementById('profileName').value.trim();
+    const dept  = document.getElementById('profileDept').value;
+    const color = colorInput.value;
+
+    btn.disabled = true; btn.textContent = 'Saving...';
+    alert.className = 'alert';
+
+    const { error } = await supabase.from('profiles').upsert({
+      id: user.id,
+      name: name,
+      default_role: dept,
+      avatar_color: color,
+    });
+
+    btn.disabled = false; btn.textContent = 'Save Changes';
+
+    if (error) {
+      alert.textContent = error.message;
+      alert.className = 'alert visible alert-error';
+      return;
+    }
+    alert.textContent = 'Profile updated.';
+    alert.className = 'alert visible alert-success';
+    setTimeout(() => alert.className = 'alert', 3000);
+  });
+
+  // ── Change password ──
+  document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn     = document.getElementById('passwordSave');
+    const alert   = document.getElementById('passwordAlert');
+    const newPw   = document.getElementById('newPassword').value;
+    const confirm = document.getElementById('confirmPassword').value;
+
+    if (newPw !== confirm) {
+      alert.textContent = 'Passwords do not match.';
+      alert.className = 'alert visible alert-error';
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Updating...';
+    alert.className = 'alert';
+
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+
+    btn.disabled = false; btn.textContent = 'Update Password';
+
+    if (error) {
+      alert.textContent = error.message;
+      alert.className = 'alert visible alert-error';
+      return;
+    }
+    alert.textContent = 'Password updated.';
+    alert.className = 'alert visible alert-success';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    setTimeout(() => alert.className = 'alert', 3000);
+  });
+
+  // ── Delete account ──
+  const deleteInput  = document.getElementById('deleteConfirm');
+  const deleteSubmit = document.getElementById('deleteSubmit');
+
+  document.getElementById('deleteAccountBtn').addEventListener('click', () => {
+    document.getElementById('deleteModal').classList.add('visible');
+    deleteInput.value = '';
+    deleteSubmit.disabled = true;
+  });
+  document.getElementById('deleteCancel').addEventListener('click', () => {
+    document.getElementById('deleteModal').classList.remove('visible');
+  });
+  document.getElementById('deleteModal').addEventListener('click', (e) => {
+    if (e.target.id === 'deleteModal') e.target.classList.remove('visible');
+  });
+
+  deleteInput.addEventListener('input', () => {
+    deleteSubmit.disabled = deleteInput.value.trim() !== 'DELETE';
+  });
+
+  deleteSubmit.addEventListener('click', async () => {
+    const alert = document.getElementById('deleteAlert');
+    deleteSubmit.disabled = true;
+    deleteSubmit.textContent = 'Deleting...';
+    alert.className = 'alert';
+
+    // Delete profile (cascade should handle related data)
+    const { error: profileErr } = await supabase
+      .from('profiles').delete().eq('id', user.id);
+
+    if (profileErr) {
+      alert.textContent = 'Failed to delete account: ' + profileErr.message;
+      alert.className = 'alert visible alert-error';
+      deleteSubmit.disabled = false;
+      deleteSubmit.textContent = 'Delete My Account';
+      return;
+    }
+
+    // Sign out
+    await supabase.auth.signOut();
+    window.location.href = '/?deleted=true';
+  });
+})();
+</script>
+</body>
+</html>
