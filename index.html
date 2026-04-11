@@ -10,7 +10,7 @@
 <style>
 /* ── Reset ── */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior:smooth; }
+html { scroll-behavior:smooth; -webkit-overflow-scrolling: touch; }
 
 /* ── Tokens ── */
 :root {
@@ -85,13 +85,16 @@ nav.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .flipbook-scroll {
   /* Height = viewport + scroll runway for all frames */
   height: calc(100vh + var(--flipbook-runway, 800px));
+  height: calc(100svh + var(--flipbook-runway, 800px));
   position: relative;
 }
 .flipbook-sticky {
   position: sticky; top: 0;
-  width: 100%; height: 100vh;
+  width: 100%; height: 100vh; height: 100svh;
   display: flex; align-items: center; justify-content: center;
   background: var(--bg); overflow: hidden;
+  /* Prevent mobile repaints during address bar animation */
+  will-change: transform;
 }
 .flipbook-canvas {
   /* Canvas fills viewport, object-fit handled in JS */
@@ -1039,8 +1042,11 @@ footer {
   const hero    = document.getElementById('heroOverlay');
   const navEl   = document.querySelector('nav');
 
+  // Cache initial viewport height to avoid jumps when mobile address bar hides/shows
+  let stableVH = window.innerHeight;
+
   // Set scroll runway
-  const runwayPx = window.innerHeight * RUNWAY_VH;
+  const runwayPx = stableVH * RUNWAY_VH;
   wrapper.style.setProperty('--flipbook-runway', runwayPx + 'px');
 
   // Build frame URLs
@@ -1071,10 +1077,11 @@ footer {
   // Size canvas to viewport (retina-aware)
   function sizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
-    canvas.width  = window.innerWidth * dpr;
-    canvas.height = window.innerHeight * dpr;
-    canvas.style.width  = window.innerWidth + 'px';
-    canvas.style.height = window.innerHeight + 'px';
+    const w = window.innerWidth, h = stableVH;
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
@@ -1086,7 +1093,7 @@ footer {
     const img = frames[index];
     if (!img || !img.naturalWidth) return;
 
-    const cw = window.innerWidth, ch = window.innerHeight;
+    const cw = window.innerWidth, ch = stableVH;
     const iw = img.naturalWidth, ih = img.naturalHeight;
     const scale = Math.max(cw / iw, ch / ih);
     const dw = iw * scale, dh = ih * scale;
@@ -1100,7 +1107,7 @@ footer {
   function onScroll() {
     const rect = wrapper.getBoundingClientRect();
     const scrolled = -rect.top;                         // how far past the top
-    const maxScroll = wrapper.offsetHeight - window.innerHeight;
+    const maxScroll = wrapper.offsetHeight - stableVH;
     const progress = Math.max(0, Math.min(1, scrolled / maxScroll));
 
     // Map progress [0..1] → frame [0..FRAME_COUNT-1]
@@ -1127,10 +1134,14 @@ footer {
   // Init
   sizeCanvas();
   window.addEventListener('resize', () => {
+    // Only update stableVH on significant height changes (rotation, not address bar)
+    const diff = Math.abs(window.innerHeight - stableVH);
+    if (diff > 100 || window.innerWidth !== canvas.style.width.replace('px','') * 1) {
+      stableVH = window.innerHeight;
+      const newRunway = stableVH * RUNWAY_VH;
+      wrapper.style.setProperty('--flipbook-runway', newRunway + 'px');
+    }
     sizeCanvas();
-    // Recalculate runway
-    const newRunway = window.innerHeight * RUNWAY_VH;
-    wrapper.style.setProperty('--flipbook-runway', newRunway + 'px');
     drawFrame(lastDrawn === -1 ? 0 : lastDrawn);
   });
 
