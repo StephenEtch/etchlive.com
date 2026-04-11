@@ -983,14 +983,7 @@ footer {
     <div class="section-label">Early access</div>
     <div class="section-title">Ready to ditch the spreadsheet?</div>
     <div class="section-desc">Etch is currently in closed beta. Drop your email and we'll get you in.</div>
-    <form action="https://formspree.io/f/meepyeag" method="POST" style="display:flex; gap:12px; max-width:440px; margin:0 auto;" onsubmit="
-      event.preventDefault();
-      var f=this, b=f.querySelector('button'), i=f.querySelector('input[type=email]');
-      b.disabled=true; b.textContent='Sending...';
-      fetch(f.action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}})
-      .then(function(r){if(r.ok){b.textContent='You\\'re on the list!';i.disabled=true;}else{b.textContent='Try again';b.disabled=false;}})
-      .catch(function(){b.textContent='Try again';b.disabled=false;});
-    ">
+    <form id="etch-signup" action="https://formspree.io/f/meepyeag" method="POST" style="display:flex; gap:12px; max-width:440px; margin:0 auto;">
       <input type="email" name="email" placeholder="you@production.com" required style="
         flex:1; padding:14px 18px; border-radius:10px;
         border:1px solid var(--border); background:var(--surface);
@@ -1000,6 +993,32 @@ footer {
       <input type="hidden" name="_subject" value="New Etch Early Access Request">
       <button type="submit" class="btn-primary" style="white-space:nowrap;">Get Access</button>
     </form>
+    <script>
+    document.getElementById('etch-signup').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var form = this;
+      var btn = form.querySelector('button');
+      var input = form.querySelector('input[type="email"]');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' }
+      }).then(function(response) {
+        if (response.ok) {
+          btn.textContent = "You're on the list!";
+          input.disabled = true;
+        } else {
+          btn.textContent = 'Try again';
+          btn.disabled = false;
+        }
+      }).catch(function() {
+        btn.textContent = 'Try again';
+        btn.disabled = false;
+      });
+    });
+    </script>
   </div>
 </section>
 
