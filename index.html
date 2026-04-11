@@ -11,6 +11,8 @@
 /* ── Reset ── */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; -webkit-overflow-scrolling: touch; }
+/* Lock viewport height via JS-set custom property to defeat iOS Safari dynamic bars */
+:root { --vh: 1vh; }
 
 /* ── Tokens ── */
 :root {
@@ -83,17 +85,15 @@ nav.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
 
 /* ── Scroll Flipbook (replaces hero) ── */
 .flipbook-scroll {
-  /* Height = viewport + scroll runway for all frames */
-  height: calc(100vh + var(--flipbook-runway, 800px));
-  height: calc(100svh + var(--flipbook-runway, 800px));
+  /* --vh is set by JS on load and only updated on orientation change */
+  height: calc(var(--vh, 1vh) * 100 + var(--flipbook-runway, 800px));
   position: relative;
 }
 .flipbook-sticky {
   position: sticky; top: 0;
-  width: 100%; height: 100vh; height: 100svh;
+  width: 100%; height: calc(var(--vh, 1vh) * 100);
   display: flex; align-items: center; justify-content: center;
   background: var(--bg); overflow: hidden;
-  /* Prevent mobile repaints during address bar animation */
   will-change: transform;
 }
 .flipbook-canvas {
@@ -1087,8 +1087,10 @@ footer {
   const hero    = document.getElementById('heroOverlay');
   const navEl   = document.querySelector('nav');
 
-  // Cache initial viewport height to avoid jumps when mobile address bar hides/shows
+  // Lock viewport height on load — immune to iOS address bar / bottom bar changes
   let stableVH = window.innerHeight;
+  let lastWidth = window.innerWidth;
+  document.documentElement.style.setProperty('--vh', stableVH / 100 + 'px');
 
   // Set scroll runway
   const runwayPx = stableVH * RUNWAY_VH;
@@ -1179,10 +1181,12 @@ footer {
   // Init
   sizeCanvas();
   window.addEventListener('resize', () => {
-    // Only update stableVH on significant height changes (rotation, not address bar)
-    const diff = Math.abs(window.innerHeight - stableVH);
-    if (diff > 100 || window.innerWidth !== canvas.style.width.replace('px','') * 1) {
+    // Only recalculate on width change (orientation flip) — ignore height-only
+    // changes caused by iOS Safari address bar / bottom bar showing/hiding
+    if (Math.abs(window.innerWidth - lastWidth) > 10) {
+      lastWidth = window.innerWidth;
       stableVH = window.innerHeight;
+      document.documentElement.style.setProperty('--vh', stableVH / 100 + 'px');
       const newRunway = stableVH * RUNWAY_VH;
       wrapper.style.setProperty('--flipbook-runway', newRunway + 'px');
     }
