@@ -121,27 +121,44 @@ nav.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
   font-family: var(--mono); font-size: 11px; color: var(--text3);
   letter-spacing: 0.08em; text-transform: uppercase;
 }
-/* Scroll hint at bottom of flipbook */
+/* Scroll hint — centered on screen with glow */
 .flipbook-scroll-hint {
-  position: absolute; bottom: 12px; left: 50%;
-  transform: translateX(-50%); z-index: 3;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  opacity: 0; transition: opacity 0.6s ease 0.5s;
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%); z-index: 3;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  opacity: 0; transition: opacity 0.8s ease 0.5s;
 }
 .flipbook-scroll-hint.visible { opacity: 1; }
 .flipbook-scroll-hint span {
-  font-family: var(--mono); font-size: 10px; color: rgba(30,20,10,0.6);
-  letter-spacing: 0.1em; text-transform: uppercase;
+  font-family: var(--mono); font-size: clamp(12px, 2.5vw, 16px);
+  color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase;
   font-weight: 500;
+  text-shadow: 0 0 20px rgba(212,160,96,0.4), 0 0 40px rgba(212,160,96,0.2);
+}
+.flipbook-scroll-hint .arrows {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 .flipbook-scroll-hint .arrow {
-  width: 16px; height: 16px; border-right: 1.5px solid rgba(30,20,10,0.5);
-  border-bottom: 1.5px solid rgba(30,20,10,0.5);
-  transform: rotate(45deg); animation: scrollBounce 1.5s ease-in-out infinite;
+  width: clamp(18px, 4vw, 24px); height: clamp(18px, 4vw, 24px);
+  border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg);
+  filter: drop-shadow(0 0 8px rgba(212,160,96,0.5));
+}
+.flipbook-scroll-hint .arrow:nth-child(1) {
+  animation: scrollBounce 1.8s ease-in-out infinite;
+  opacity: 0.5;
+}
+.flipbook-scroll-hint .arrow:nth-child(2) {
+  animation: scrollBounce 1.8s ease-in-out infinite 0.15s;
+  opacity: 0.8;
+}
+.flipbook-scroll-hint .arrow:nth-child(3) {
+  animation: scrollBounce 1.8s ease-in-out infinite 0.3s;
+  opacity: 1;
 }
 @keyframes scrollBounce {
   0%,100% { transform: rotate(45deg) translateY(0); }
-  50% { transform: rotate(45deg) translateY(4px); }
+  50% { transform: rotate(45deg) translateY(6px); }
 }
 
 /* ── Hero (text overlay on last frame — split above/below logo) ── */
@@ -726,7 +743,11 @@ footer {
     <!-- Scroll hint (appears once loaded, fades on scroll) -->
     <div class="flipbook-scroll-hint" id="flipHint">
       <span>Scroll</span>
-      <div class="arrow"></div>
+      <div class="arrows">
+        <div class="arrow"></div>
+        <div class="arrow"></div>
+        <div class="arrow"></div>
+      </div>
     </div>
 
     <!-- Hero text (fades in on the last frame — split above/below logo) -->
