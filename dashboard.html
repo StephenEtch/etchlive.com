@@ -157,10 +157,11 @@
   let sessions = [];
 
   async function loadOrgs() {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('org_members')
       .select('org_id, role, organizations(id, name, created_at)')
       .eq('user_id', user.id);
+    if (error) console.error('[loadOrgs]', error.message);
     orgs = (data || []).map(d => ({ ...d.organizations, role: d.role }));
     return orgs;
   }
@@ -168,22 +169,24 @@
   async function loadProjects() {
     if (!orgs.length) { projects = []; return []; }
     const orgIds = orgs.map(o => o.id);
-    const { data } = await sb
+    const { data, error } = await sb
       .from('projects')
       .select('*')
       .in('org_id', orgIds)
       .order('created_at', { ascending: false });
+    if (error) console.error('[loadProjects]', error.message);
     projects = data || [];
     return projects;
   }
 
   async function loadSessions() {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('session_members')
       .select('session_id, sessions(id, label, invite_code, created_at, project_id, projects(name))')
       .eq('user_id', user.id)
       .order('session_id', { ascending: false })
       .limit(10);
+    if (error) console.error('[loadSessions]', error.message);
     sessions = (data || []).map(d => d.sessions).filter(Boolean);
     return sessions;
   }
@@ -276,9 +279,17 @@
       return;
     }
 
-    await sb.from('org_members').insert({
+    const { error: memErr } = await sb.from('org_members').insert({
       org_id: org.id, user_id: user.id, role: 'owner',
     });
+
+    if (memErr) {
+      alert.textContent = 'Org created but failed to add you as owner: ' + memErr.message;
+      alert.className = 'alert visible alert-error';
+      btn.disabled = false; btn.textContent = 'Create';
+      console.error('[org_members insert]', memErr);
+      return;
+    }
 
     closeModal('orgModal');
     document.getElementById('orgName').value = '';
