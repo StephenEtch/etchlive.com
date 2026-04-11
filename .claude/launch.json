@@ -1,0 +1,37 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "etch static server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["/Users/stephenhedges/Desktop/Etch/serve.js"],
+      "port": 3000,
+      "openPath": "/etch.html"
+    },
+    {
+      "name": "variants preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3001", "--directory", "/Users/stephenhedges/Desktop/Etch"],
+      "port": 3001,
+      "openPath": "/etch-vortex-variants.html"
+    },
+    {
+      "name": "etch electron",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start", "--prefix", "/Users/stephenhedges/Desktop/Etch"],
+      "port": 3000
+    },
+    {
+      "name": "etch electron devtools",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start", "--prefix", "/Users/stephenhedges/Desktop/Etch"],
+      "port": 3000
+    },
+    {
+      "name": "landing page",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3002", "--directory", "/Users/stephenhedges/Desktop/CueNote"],
+      "port": 3002
+    }
+  ]
+}
