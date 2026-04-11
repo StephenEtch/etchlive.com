@@ -193,10 +193,15 @@
       return;
     }
 
+    // Detect existing account — Supabase returns empty identities for repeated signup
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      showAlert('An account with this email already exists. Try signing in instead.', 'error');
+      return;
+    }
+
     // If email confirmation is required
     if (data.user && !data.session) {
       showAlert('Account created! Check your email to confirm, then sign in.', 'success');
-      // Update profile with display name
       return;
     }
 
