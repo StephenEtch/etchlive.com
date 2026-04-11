@@ -950,13 +950,21 @@ footer {
     <div class="section-label">Early access</div>
     <div class="section-title">Ready to ditch the spreadsheet?</div>
     <div class="section-desc">Etch is currently in closed beta. Drop your email and we'll get you in.</div>
-    <form onsubmit="event.preventDefault(); this.querySelector('button').textContent='You\'re on the list!'; this.querySelector('button').disabled=true; this.querySelector('input').disabled=true;" style="display:flex; gap:12px; max-width:440px; margin:0 auto;">
-      <input type="email" placeholder="you@production.com" required style="
+    <form action="https://formspree.io/f/meepyeag" method="POST" style="display:flex; gap:12px; max-width:440px; margin:0 auto;" onsubmit="
+      event.preventDefault();
+      var f=this, b=f.querySelector('button'), i=f.querySelector('input[type=email]');
+      b.disabled=true; b.textContent='Sending...';
+      fetch(f.action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}})
+      .then(function(r){if(r.ok){b.textContent='You\\'re on the list!';i.disabled=true;}else{b.textContent='Try again';b.disabled=false;}})
+      .catch(function(){b.textContent='Try again';b.disabled=false;});
+    ">
+      <input type="email" name="email" placeholder="you@production.com" required style="
         flex:1; padding:14px 18px; border-radius:10px;
         border:1px solid var(--border); background:var(--surface);
         color:var(--text); font-family:var(--sans); font-size:15px;
         outline:none; transition:border-color 0.2s;
       " onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      <input type="hidden" name="_subject" value="New Etch Early Access Request">
       <button type="submit" class="btn-primary" style="white-space:nowrap;">Get Access</button>
     </form>
   </div>
@@ -970,8 +978,9 @@ footer {
       <a href="#features">Features</a>
       <a href="#how">How It Works</a>
       <a href="#departments">Departments</a>
+      <a href="mailto:stephen@etchlive.com">Contact</a>
     </div>
-    <div class="footer-copy">&copy; 2026 Etch</div>
+    <div class="footer-copy">&copy; 2026 Etch. All rights reserved. Founded by Stephen Hedges.</div>
   </div>
 </footer>
 
