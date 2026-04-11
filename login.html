@@ -211,7 +211,6 @@
       await sb.from('profiles').upsert({
         id: data.user.id,
         name: name,
-        email: email,
       });
       window.location.href = redirect;
     }
