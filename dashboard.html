@@ -157,7 +157,7 @@
   let sessions = [];
 
   async function loadOrgs() {
-    const { data } = await supabase
+    const { data } = await sb
       .from('org_members')
       .select('org_id, role, organizations(id, name, created_at)')
       .eq('user_id', user.id);
@@ -168,7 +168,7 @@
   async function loadProjects() {
     if (!orgs.length) { projects = []; return []; }
     const orgIds = orgs.map(o => o.id);
-    const { data } = await supabase
+    const { data } = await sb
       .from('projects')
       .select('*')
       .in('org_id', orgIds)
@@ -178,7 +178,7 @@
   }
 
   async function loadSessions() {
-    const { data } = await supabase
+    const { data } = await sb
       .from('session_members')
       .select('session_id, sessions(id, label, invite_code, created_at, project_id, projects(name))')
       .eq('user_id', user.id)
@@ -266,7 +266,7 @@
     btn.disabled = true; btn.textContent = 'Creating...';
     alert.className = 'alert';
 
-    const { data: org, error } = await supabase
+    const { data: org, error } = await sb
       .from('organizations').insert({ name }).select().single();
 
     if (error) {
@@ -276,7 +276,7 @@
       return;
     }
 
-    await supabase.from('org_members').insert({
+    await sb.from('org_members').insert({
       org_id: org.id, user_id: user.id, role: 'owner',
     });
 
@@ -317,7 +317,7 @@
     btn.disabled = true; btn.textContent = 'Creating...';
     alert.className = 'alert';
 
-    const { error } = await supabase
+    const { error } = await sb
       .from('projects').insert({ org_id: orgId, name, created_by: user.id });
 
     if (error) {

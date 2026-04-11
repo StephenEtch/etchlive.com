@@ -4,22 +4,22 @@
 const SUPABASE_URL  = 'https://jcsmeyprhxveekwgzkto.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_s5D0dQpnsg5xmMvDRCLIcg_9RSVr5BC';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function getSession() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await sb.auth.getSession();
   return session;
 }
 
 async function getUser() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await sb.auth.getUser();
   return user;
 }
 
 async function getProfile(userId) {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -29,7 +29,7 @@ async function getProfile(userId) {
 }
 
 async function signOut() {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   window.location.href = '/';
 }
 

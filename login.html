@@ -145,7 +145,7 @@
     const pass  = document.getElementById('si-password').value;
 
     setLoading(btn, true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
     setLoading(btn, false);
 
     if (error) {
@@ -171,7 +171,7 @@
     }
 
     setLoading(btn, true);
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await sb.auth.signUp({
       email,
       password: pass,
       options: { data: { display_name: name } }
@@ -193,7 +193,7 @@
     // If auto-confirmed (e.g. email confirmation disabled)
     if (data.session) {
       // Update profile name
-      await supabase.from('profiles').upsert({
+      await sb.from('profiles').upsert({
         id: data.user.id,
         name: name,
         email: email,
@@ -210,7 +210,7 @@
     const email = document.getElementById('fp-email').value.trim();
 
     setLoading(btn, true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + '/account.html?reset=true',
     });
     setLoading(btn, false);
