@@ -644,22 +644,51 @@ footer {
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .features-grid, .steps { grid-template-columns: 1fr; }
-  .hero h1 { font-size: 40px; }
-  .hero-actions { flex-direction: column; }
+  .container { padding: 0 20px; }
+  section { padding: 80px 0; }
+
+  /* Nav */
   .nav-links a:not(.nav-cta) { display: none; }
-  .hero-overlay h1 { font-size: 40px; }
-  .hero-overlay { padding: 100px 24px 60px; }
-  .hero-actions { flex-direction: column; align-items: center; }
-  .showcase-grid { grid-template-columns: 1fr; }
+  .nav-cta { padding: 6px 14px; font-size: 12px; }
+  .nav-inner { padding: 0 20px; }
+
+  /* Hero overlay */
+  .hero-overlay { padding: 0; }
+  .hero-top { padding-top: 80px; padding-left: 20px; padding-right: 20px; }
+  .hero-bottom { padding-bottom: 40px; padding-left: 20px; padding-right: 20px; }
+  .hero-logo { font-size: clamp(48px, 14vw, 80px); }
+  .hero-tagline { font-size: clamp(16px, 4.5vw, 22px); }
+  .hero-desc { font-size: 14px; padding: 0 8px; margin-bottom: 20px; }
+  .hero-actions { flex-direction: column; align-items: center; width: 100%; }
+  .hero-actions .btn-primary,
+  .hero-actions .btn-secondary { width: 100%; max-width: 280px; text-align: center; }
+
+  /* Grids */
+  .features-grid, .steps { grid-template-columns: 1fr; }
+  .showcase-grid { grid-template-columns: 1fr; gap: 32px; }
   .showcase-preview { order: -1; }
-  .compact-window { max-width: 100%; }
   .view-preview.reverse .showcase-preview { order: -1; }
+  .view-preview { padding: 60px 0; }
+
+  /* Preview windows */
+  .compact-window { max-width: 100%; }
   .anim-window { max-width: 100%; }
   .sim-timeline { padding: 20px; gap: 12px; }
   .sim-card { min-width: 180px; }
-  .footer-inner { flex-direction: column; gap: 20px; }
+
+  /* CTA form */
+  .cta-section { padding: 80px 20px; }
+  .cta-section form { flex-direction: column !important; max-width: 100% !important; }
+  .cta-section form input[type="email"] { width: 100% !important; flex: none !important; }
+  .cta-section form button { width: 100% !important; }
+
+  /* Departments */
   .dept-row { justify-content: center; }
+
+  /* Footer */
+  .footer-inner { flex-direction: column; gap: 20px; text-align: center; }
+  .footer-links { flex-wrap: wrap; justify-content: center; }
+  .footer-copy { line-height: 1.5; }
 }
 </style>
 </head>
