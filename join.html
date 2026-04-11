@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join Organization — Etch</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<nav class="app-nav">
+  <div class="app-nav-inner">
+    <a href="/" class="app-nav-logo">Etch</a>
+    <div class="app-nav-links">
+      <a href="/login.html" data-auth-link>Login</a>
+    </div>
+  </div>
+</nav>
+
+<div class="auth-wrapper">
+  <div class="auth-card" style="text-align:center;">
+    <h1 style="margin-bottom:8px;">Join Organization</h1>
+    <p class="subtitle" id="joinInfo">Checking invite...</p>
+
+    <div id="joinAlert" class="alert"></div>
+
+    <!-- Not logged in -->
+    <div id="joinLogin" style="display:none;">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">You need an account to join. Sign up or log in first, then come back to this link.</p>
+      <a href="/login.html" class="btn btn-primary btn-full" id="joinLoginBtn">Sign Up / Log In</a>
+    </div>
+
+    <!-- Logged in, ready to join -->
+    <div id="joinReady" style="display:none;">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;" id="joinReadyText"></p>
+      <button class="btn btn-primary btn-full" id="joinAcceptBtn">Join Organization</button>
+    </div>
+
+    <!-- Already a member -->
+    <div id="joinAlready" style="display:none;">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">You're already a member of this organization.</p>
+      <a href="/dashboard.html" class="btn btn-primary btn-full">Go to Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-init.js"></script>
+<script>
+(async function() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var info = document.getElementById('joinInfo');
+  var alertEl = document.getElementById('joinAlert');
+
+  updateNavAuth();
+
+  if (!code) {
+    info.textContent = 'No invite code provided.';
+    alertEl.textContent = 'This link is missing an invite code.';
+    alertEl.className = 'alert visible alert-error';
+    return;
+  }
+
+  // Look up the org
+  var { data: org, error } = await sb
+    .from('organizations')
+    .select('id, name')
+    .eq('invite_code', code.toUpperCase().trim())
+    .single();
+
+  if (error || !org) {
+    info.textContent = 'Invalid invite.';
+    alertEl.textContent = 'This invite link is invalid or has expired.';
+    alertEl.className = 'alert visible alert-error';
+    return;
+  }
+
+  info.textContent = 'You\'ve been invited to join ' + org.name;
+
+  // Check if user is logged in
+  var user = await getUser();
+
+  if (!user) {
+    // Not logged in — show signup/login prompt
+    document.getElementById('joinLogin').style.display = '';
+    // Save the invite URL so they come back after login
+    var loginBtn = document.getElementById('joinLoginBtn');
+    loginBtn.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+    return;
+  }
+
+  // Logged in — check if already a member
+  var { data: existing } = await sb
+    .from('org_members')
+    .select('org_id')
+    .eq('org_id', org.id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (existing) {
+    document.getElementById('joinAlready').style.display = '';
+    return;
+  }
+
+  // Ready to join
+  document.getElementById('joinReady').style.display = '';
+  document.getElementById('joinReadyText').textContent = 'Join "' + org.name + '" as a team member? You\'ll be able to access all projects in this organization.';
+
+  document.getElementById('joinAcceptBtn').addEventListener('click', async function() {
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Joining...';
+
+    var profile = await getProfile(user.id);
+
+    var { error: joinErr } = await sb.from('org_members').insert({
+      org_id: org.id,
+      user_id: user.id,
+      role: 'member',
+    });
+
+    if (joinErr) {
+      alertEl.textContent = joinErr.message;
+      alertEl.className = 'alert visible alert-error';
+      btn.disabled = false; btn.textContent = 'Join Organization';
+      return;
+    }
+
+    // Success — redirect to dashboard
+    window.location.href = '/dashboard.html';
+  });
+})();
+</script>
+</body>
+</html>

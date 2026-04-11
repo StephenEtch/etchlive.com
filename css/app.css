@@ -368,6 +368,12 @@ select.form-input {
   gap: 16px; margin-bottom: 48px;
 }
 
+/* ── Dashboard sections (full width) ── */
+.dash-section { margin-bottom: 48px; }
+.dash-section .card {
+  margin-bottom: 12px;
+}
+
 /* ── Empty state ── */
 .empty-state {
   text-align: center; padding: 48px 24px;
