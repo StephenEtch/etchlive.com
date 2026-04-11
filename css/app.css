@@ -216,16 +216,136 @@ select.form-input {
   border-radius: var(--radius);
   padding: 24px;
   transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 .card:hover {
   border-color: rgba(212,160,96,0.3);
   box-shadow: 0 0 30px rgba(212,160,96,0.05);
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
 }
 .card-title {
   font-size: 16px; font-weight: 700; margin-bottom: 4px;
 }
 .card-meta {
   font-size: 13px; color: var(--text2);
+}
+.card-expand-icon {
+  font-size: 12px; color: var(--text3); transition: transform 0.2s;
+}
+.card.expanded .card-expand-icon { transform: rotate(180deg); }
+
+/* ── Card details (expandable) ── */
+.card-details {
+  display: none; margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.card.expanded .card-details { display: block; }
+.card-actions {
+  display: flex; gap: 8px; margin-top: 16px;
+}
+
+/* ── Inline edit ── */
+.inline-edit {
+  display: flex; gap: 8px; align-items: center; margin-top: 12px;
+}
+.inline-edit input {
+  flex: 1; padding: 8px 12px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text);
+  font-family: var(--sans); font-size: 14px; outline: none;
+}
+.inline-edit input:focus { border-color: var(--accent); }
+.inline-edit button {
+  padding: 8px 14px; border-radius: 8px; border: none;
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.inline-edit .save-btn {
+  background: var(--accent); color: #0c0a08;
+}
+.inline-edit .cancel-btn {
+  background: var(--surface2); color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+/* ── Member list ── */
+.member-list { list-style: none; }
+.member-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid rgba(46,40,32,0.3);
+}
+.member-item:last-child { border-bottom: none; }
+.member-info {
+  display: flex; align-items: center; gap: 10px;
+}
+.member-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #0c0a08;
+}
+.member-name { font-size: 14px; font-weight: 500; }
+.role-badge {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 3px 8px; border-radius: 6px;
+  font-family: var(--mono);
+}
+.role-badge.owner {
+  background: rgba(212,160,96,0.15); color: var(--accent);
+}
+.role-badge.admin {
+  background: rgba(74,144,217,0.15); color: #4a90d9;
+}
+.role-badge.member {
+  background: rgba(107,114,128,0.15); color: #6b7280;
+}
+.member-remove {
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; font-size: 16px; padding: 4px 8px;
+  border-radius: 6px; transition: color 0.2s, background 0.2s;
+}
+.member-remove:hover {
+  color: var(--danger); background: rgba(224,82,82,0.1);
+}
+
+/* ── Join session ── */
+.join-session {
+  display: flex; gap: 10px; margin-bottom: 24px;
+}
+.join-session input {
+  flex: 1; padding: 10px 16px; max-width: 240px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: var(--mono); font-size: 15px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  outline: none;
+}
+.join-session input:focus { border-color: var(--accent); }
+.join-session input::placeholder {
+  text-transform: none; letter-spacing: normal; color: var(--text3);
+}
+
+/* ── Copyable invite code ── */
+.invite-code {
+  font-family: var(--mono); font-size: 16px; font-weight: 600;
+  letter-spacing: 0.12em; color: var(--accent);
+  padding: 8px 14px; background: var(--bg);
+  border-radius: 8px; border: 1px solid var(--border);
+  display: inline-block; cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+.invite-code:hover { background: var(--surface2); }
+.invite-code.copied::after {
+  content: 'Copied!'; position: absolute;
+  top: -28px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; font-family: var(--sans);
+  color: var(--success); white-space: nowrap;
+  animation: fadeOut 1.5s ease forwards;
+}
+@keyframes fadeOut {
+  0%,60% { opacity: 1; } 100% { opacity: 0; }
 }
 
 /* ── Section headers ── */

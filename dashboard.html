@@ -68,7 +68,7 @@
     </div>
   </div>
 
-  <!-- Recent Sessions -->
+  <!-- Sessions -->
   <div>
     <div class="section-header">
       <div>
@@ -76,9 +76,14 @@
         <div class="section-title">Recent sessions</div>
       </div>
     </div>
+    <div class="join-session">
+      <input type="text" id="joinCodeInput" placeholder="Enter invite code" maxlength="10">
+      <button class="btn btn-primary" id="joinSessionBtn">Join</button>
+    </div>
+    <div id="joinAlert" class="alert" style="max-width:400px;"></div>
     <div class="card-grid" id="sessionsGrid"></div>
     <div class="empty-state" id="sessionsEmpty" style="display:none;">
-      <p>No sessions yet. Sessions are created from the Etch desktop app.</p>
+      <p>No sessions yet. Sessions are created from the Etch desktop app, or join one with an invite code above.</p>
     </div>
   </div>
 
@@ -128,6 +133,19 @@
   </div>
 </div>
 
+<!-- ── Confirm Delete Modal ── -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3 id="deleteTitle">Delete?</h3>
+    <p id="deleteDesc">This action cannot be undone.</p>
+    <div id="deleteAlert" class="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="deleteCancel">Cancel</button>
+      <button class="btn btn-danger" id="deleteConfirm">Delete</button>
+    </div>
+  </div>
+</div>
+
 <footer class="app-footer">&copy; 2026 Etch. All rights reserved.</footer>
 
 <!-- ── Supabase ── -->
@@ -138,7 +156,7 @@
 (async function() {
   // ── Auth ──
   const user = await getUser();
-  if (!user) return; // auth-guard handles redirect
+  if (!user) return;
 
   const profile = await getProfile(user.id);
   const displayName = profile?.name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'there';
@@ -151,11 +169,13 @@
     signOut();
   });
 
-  // ── Load data ──
+  // ── State ──
   let orgs = [];
   let projects = [];
   let sessions = [];
+  let _pendingDelete = null; // { table, id, label }
 
+  // ── Load data ──
   async function loadOrgs() {
     const { data, error } = await sb
       .from('org_members')
@@ -164,6 +184,15 @@
     if (error) console.error('[loadOrgs]', error.message);
     orgs = (data || []).map(d => ({ ...d.organizations, role: d.role }));
     return orgs;
+  }
+
+  async function loadOrgMembers(orgId) {
+    const { data, error } = await sb
+      .from('org_members')
+      .select('user_id, role, profiles(id, name, avatar_color)')
+      .eq('org_id', orgId);
+    if (error) { console.error('[loadOrgMembers]', error.message); return []; }
+    return (data || []).map(d => ({ ...d.profiles, role: d.role }));
   }
 
   async function loadProjects() {
@@ -191,49 +220,103 @@
     return sessions;
   }
 
-  // ── Render ──
+  // ── Render: Organizations ──
   function renderOrgs() {
-    const grid = document.getElementById('orgsGrid');
-    const empty = document.getElementById('orgsEmpty');
+    var grid = document.getElementById('orgsGrid');
+    var empty = document.getElementById('orgsEmpty');
     grid.innerHTML = '';
     if (!orgs.length) { empty.style.display = ''; grid.style.display = 'none'; return; }
     empty.style.display = 'none'; grid.style.display = '';
-    orgs.forEach(o => {
-      const card = document.createElement('div');
+
+    orgs.forEach(function(o) {
+      var isOwner = o.role === 'owner';
+      var isAdmin = o.role === 'admin' || isOwner;
+      var card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = '<div class="card-title">' + esc(o.name) + '</div>' +
-        '<div class="card-meta">Role: ' + esc(o.role) + ' &middot; Created ' + fmtDate(o.created_at) + '</div>';
+      card.dataset.id = o.id;
+
+      card.innerHTML =
+        '<div class="card-header" data-toggle>' +
+          '<div>' +
+            '<div class="card-title">' + esc(o.name) + '</div>' +
+            '<div class="card-meta">' + esc(o.role) + ' &middot; Created ' + fmtDate(o.created_at) + '</div>' +
+          '</div>' +
+          '<span class="card-expand-icon">&#9660;</span>' +
+        '</div>' +
+        '<div class="card-details">' +
+          '<div class="section-label" style="margin-bottom:8px;">Members</div>' +
+          '<div class="members-container" data-org="' + o.id + '">Loading...</div>' +
+          (isAdmin ?
+            '<div class="card-actions">' +
+              '<button class="btn btn-secondary" data-edit-org="' + o.id + '">Edit Name</button>' +
+              (isOwner ? '<button class="btn btn-danger" data-delete-org="' + o.id + '">Delete</button>' : '') +
+            '</div>' : '') +
+          '<div class="inline-edit" data-editform-org="' + o.id + '" style="display:none;">' +
+            '<input type="text" value="' + esc(o.name) + '">' +
+            '<button class="save-btn" data-save-org="' + o.id + '">Save</button>' +
+            '<button class="cancel-btn" data-cancel-org="' + o.id + '">Cancel</button>' +
+          '</div>' +
+        '</div>';
+
       grid.appendChild(card);
     });
   }
 
+  // ── Render: Projects ──
   function renderProjects() {
-    const grid = document.getElementById('projectsGrid');
-    const empty = document.getElementById('projectsEmpty');
+    var grid = document.getElementById('projectsGrid');
+    var empty = document.getElementById('projectsEmpty');
     grid.innerHTML = '';
     if (!projects.length) { empty.style.display = ''; grid.style.display = 'none'; return; }
     empty.style.display = 'none'; grid.style.display = '';
-    projects.forEach(p => {
-      const card = document.createElement('div');
+
+    projects.forEach(function(p) {
+      var org = orgs.find(function(o) { return o.id === p.org_id; });
+      var canEdit = org && (org.role === 'owner' || org.role === 'admin');
+      var card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = '<div class="card-title">' + esc(p.name) + '</div>' +
-        '<div class="card-meta">Created ' + fmtDate(p.created_at) + '</div>';
+      card.dataset.id = p.id;
+
+      card.innerHTML =
+        '<div class="card-header" data-toggle>' +
+          '<div>' +
+            '<div class="card-title">' + esc(p.name) + '</div>' +
+            '<div class="card-meta">' + esc(org?.name || '') + ' &middot; Created ' + fmtDate(p.created_at) + '</div>' +
+          '</div>' +
+          '<span class="card-expand-icon">&#9660;</span>' +
+        '</div>' +
+        '<div class="card-details">' +
+          (canEdit ?
+            '<div class="card-actions">' +
+              '<button class="btn btn-secondary" data-edit-proj="' + p.id + '">Edit Name</button>' +
+              '<button class="btn btn-danger" data-delete-proj="' + p.id + '">Delete</button>' +
+            '</div>' : '') +
+          '<div class="inline-edit" data-editform-proj="' + p.id + '" style="display:none;">' +
+            '<input type="text" value="' + esc(p.name) + '">' +
+            '<button class="save-btn" data-save-proj="' + p.id + '">Save</button>' +
+            '<button class="cancel-btn" data-cancel-proj="' + p.id + '">Cancel</button>' +
+          '</div>' +
+        '</div>';
+
       grid.appendChild(card);
     });
   }
 
+  // ── Render: Sessions ──
   function renderSessions() {
-    const grid = document.getElementById('sessionsGrid');
-    const empty = document.getElementById('sessionsEmpty');
+    var grid = document.getElementById('sessionsGrid');
+    var empty = document.getElementById('sessionsEmpty');
     grid.innerHTML = '';
     if (!sessions.length) { empty.style.display = ''; grid.style.display = 'none'; return; }
     empty.style.display = 'none'; grid.style.display = '';
-    sessions.forEach(s => {
-      const card = document.createElement('div');
+
+    sessions.forEach(function(s) {
+      var card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = '<div class="card-title">' + esc(s.label || 'Session') + '</div>' +
-        '<div class="card-meta">' + esc(s.projects?.name || '') + '</div>' +
-        (s.invite_code ? '<div class="invite-code" style="margin-top:10px;">' + esc(s.invite_code) + '</div>' : '');
+      card.innerHTML =
+        '<div class="card-title">' + esc(s.label || 'Session') + '</div>' +
+        '<div class="card-meta">' + esc(s.projects?.name || '') + ' &middot; ' + fmtDate(s.created_at) + '</div>' +
+        (s.invite_code ? '<div class="invite-code" data-copy="' + esc(s.invite_code) + '" style="margin-top:10px;" title="Click to copy">' + esc(s.invite_code) + '</div>' : '');
       grid.appendChild(card);
     });
   }
@@ -252,25 +335,258 @@
   renderSessions();
   updateStats();
 
+  // ── Event delegation ──
+  document.addEventListener('click', async function(e) {
+    var t = e.target;
+
+    // Toggle card expand (accordion)
+    var toggle = t.closest('[data-toggle]');
+    if (toggle) {
+      var card = toggle.closest('.card');
+      var wasExpanded = card.classList.contains('expanded');
+      // Collapse all in same grid
+      card.parentElement.querySelectorAll('.card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
+      if (!wasExpanded) {
+        card.classList.add('expanded');
+        // Load org members if needed
+        var mc = card.querySelector('.members-container');
+        if (mc && mc.textContent === 'Loading...') {
+          var orgId = mc.dataset.org;
+          var members = await loadOrgMembers(orgId);
+          var thisOrg = orgs.find(function(o) { return o.id === orgId; });
+          var amOwner = thisOrg && thisOrg.role === 'owner';
+          mc.innerHTML = members.length ? '<ul class="member-list">' + members.map(function(m) {
+            return '<li class="member-item">' +
+              '<div class="member-info">' +
+                '<div class="member-avatar" style="background:' + (m.avatar_color || '#6b7280') + '">' + (m.name || '?').charAt(0).toUpperCase() + '</div>' +
+                '<span class="member-name">' + esc(m.name || 'Unknown') + '</span>' +
+                '<span class="role-badge ' + m.role + '">' + m.role + '</span>' +
+              '</div>' +
+              (amOwner && m.id !== user.id ? '<button class="member-remove" data-remove-member="' + m.id + '" data-remove-org="' + orgId + '" title="Remove member">&times;</button>' : '') +
+            '</li>';
+          }).join('') + '</ul>' : '<div style="color:var(--text3);font-size:13px;">No members</div>';
+        }
+      }
+      return;
+    }
+
+    // Copy invite code
+    var copyEl = t.closest('[data-copy]');
+    if (copyEl) {
+      navigator.clipboard.writeText(copyEl.dataset.copy);
+      copyEl.classList.add('copied');
+      setTimeout(function() { copyEl.classList.remove('copied'); }, 1600);
+      return;
+    }
+
+    // Edit org name
+    if (t.dataset.editOrg) {
+      var ef = document.querySelector('[data-editform-org="' + t.dataset.editOrg + '"]');
+      ef.style.display = 'flex';
+      t.closest('.card-actions').style.display = 'none';
+      ef.querySelector('input').focus();
+      return;
+    }
+    if (t.dataset.cancelOrg) {
+      var ef2 = document.querySelector('[data-editform-org="' + t.dataset.cancelOrg + '"]');
+      ef2.style.display = 'none';
+      ef2.closest('.card-details').querySelector('.card-actions').style.display = '';
+      return;
+    }
+    if (t.dataset.saveOrg) {
+      var id = t.dataset.saveOrg;
+      var input = document.querySelector('[data-editform-org="' + id + '"] input');
+      var newName = input.value.trim();
+      if (!newName) return;
+      t.disabled = true; t.textContent = '...';
+      var { error } = await sb.from('organizations').update({ name: newName }).eq('id', id);
+      t.disabled = false; t.textContent = 'Save';
+      if (error) { console.error('[editOrg]', error.message); return; }
+      await loadOrgs(); renderOrgs(); populateOrgSelect();
+      return;
+    }
+
+    // Delete org
+    if (t.dataset.deleteOrg) {
+      var orgToDelete = orgs.find(function(o) { return o.id === t.dataset.deleteOrg; });
+      confirmDelete('organizations', t.dataset.deleteOrg, orgToDelete?.name || 'this organization');
+      return;
+    }
+
+    // Edit project name
+    if (t.dataset.editProj) {
+      var ef3 = document.querySelector('[data-editform-proj="' + t.dataset.editProj + '"]');
+      ef3.style.display = 'flex';
+      t.closest('.card-actions').style.display = 'none';
+      ef3.querySelector('input').focus();
+      return;
+    }
+    if (t.dataset.cancelProj) {
+      var ef4 = document.querySelector('[data-editform-proj="' + t.dataset.cancelProj + '"]');
+      ef4.style.display = 'none';
+      ef4.closest('.card-details').querySelector('.card-actions').style.display = '';
+      return;
+    }
+    if (t.dataset.saveProj) {
+      var pid = t.dataset.saveProj;
+      var pinput = document.querySelector('[data-editform-proj="' + pid + '"] input');
+      var pName = pinput.value.trim();
+      if (!pName) return;
+      t.disabled = true; t.textContent = '...';
+      var { error: pErr } = await sb.from('projects').update({ name: pName }).eq('id', pid);
+      t.disabled = false; t.textContent = 'Save';
+      if (pErr) { console.error('[editProj]', pErr.message); return; }
+      await loadProjects(); renderProjects();
+      return;
+    }
+
+    // Delete project
+    if (t.dataset.deleteProj) {
+      var projToDelete = projects.find(function(p) { return p.id === t.dataset.deleteProj; });
+      confirmDelete('projects', t.dataset.deleteProj, projToDelete?.name || 'this project');
+      return;
+    }
+
+    // Remove org member
+    if (t.dataset.removeMember) {
+      var { error: rmErr } = await sb.from('org_members')
+        .delete()
+        .eq('org_id', t.dataset.removeOrg)
+        .eq('user_id', t.dataset.removeMember);
+      if (rmErr) { console.error('[removeMember]', rmErr.message); return; }
+      // Refresh the member list
+      var mc2 = t.closest('.members-container');
+      mc2.textContent = 'Loading...';
+      var card2 = t.closest('.card');
+      card2.classList.remove('expanded');
+      card2.classList.add('expanded');
+      // Trigger reload
+      var members2 = await loadOrgMembers(t.dataset.removeOrg);
+      var thisOrg2 = orgs.find(function(o) { return o.id === t.dataset.removeOrg; });
+      var amOwner2 = thisOrg2 && thisOrg2.role === 'owner';
+      mc2.innerHTML = members2.length ? '<ul class="member-list">' + members2.map(function(m) {
+        return '<li class="member-item">' +
+          '<div class="member-info">' +
+            '<div class="member-avatar" style="background:' + (m.avatar_color || '#6b7280') + '">' + (m.name || '?').charAt(0).toUpperCase() + '</div>' +
+            '<span class="member-name">' + esc(m.name || 'Unknown') + '</span>' +
+            '<span class="role-badge ' + m.role + '">' + m.role + '</span>' +
+          '</div>' +
+          (amOwner2 && m.id !== user.id ? '<button class="member-remove" data-remove-member="' + m.id + '" data-remove-org="' + t.dataset.removeOrg + '" title="Remove member">&times;</button>' : '') +
+        '</li>';
+      }).join('') + '</ul>' : '<div style="color:var(--text3);font-size:13px;">No members</div>';
+      return;
+    }
+  });
+
+  // ── Delete confirmation ──
+  function confirmDelete(table, id, label) {
+    _pendingDelete = { table: table, id: id };
+    document.getElementById('deleteTitle').textContent = 'Delete "' + label + '"?';
+    document.getElementById('deleteDesc').textContent = 'This will permanently delete this ' + (table === 'organizations' ? 'organization and all its members' : 'project') + '. This cannot be undone.';
+    document.getElementById('deleteAlert').className = 'alert';
+    openModal('deleteModal');
+  }
+
+  document.getElementById('deleteCancel').addEventListener('click', function() { closeModal('deleteModal'); });
+  document.getElementById('deleteConfirm').addEventListener('click', async function() {
+    if (!_pendingDelete) return;
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Deleting...';
+
+    // If deleting org, delete members first
+    if (_pendingDelete.table === 'organizations') {
+      await sb.from('org_members').delete().eq('org_id', _pendingDelete.id);
+    }
+
+    var { error } = await sb.from(_pendingDelete.table).delete().eq('id', _pendingDelete.id);
+    btn.disabled = false; btn.textContent = 'Delete';
+
+    if (error) {
+      var da = document.getElementById('deleteAlert');
+      da.textContent = error.message;
+      da.className = 'alert visible alert-error';
+      return;
+    }
+
+    closeModal('deleteModal');
+    _pendingDelete = null;
+    await loadOrgs();
+    await loadProjects();
+    renderOrgs();
+    renderProjects();
+    updateStats();
+    populateOrgSelect();
+  });
+
+  // ── Join Session ──
+  document.getElementById('joinSessionBtn').addEventListener('click', async function() {
+    var code = document.getElementById('joinCodeInput').value.trim();
+    var alertEl = document.getElementById('joinAlert');
+    alertEl.className = 'alert';
+    if (!code) { alertEl.textContent = 'Enter an invite code.'; alertEl.className = 'alert visible alert-error'; return; }
+
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Joining...';
+
+    var { data: session, error: sessErr } = await sb
+      .from('sessions')
+      .select('*, projects(name)')
+      .eq('invite_code', code.toUpperCase().trim())
+      .single();
+
+    if (sessErr || !session) {
+      alertEl.textContent = 'Invalid invite code. Check the code and try again.';
+      alertEl.className = 'alert visible alert-error';
+      btn.disabled = false; btn.textContent = 'Join';
+      return;
+    }
+
+    var { error: joinErr } = await sb.from('session_members').upsert({
+      session_id: session.id,
+      user_id: user.id,
+      name: displayName,
+      role: profile?.default_role || 'gen',
+      color: profile?.avatar_color || '#e05a2b',
+      is_admin: false,
+    }, { onConflict: 'session_id,user_id' });
+
+    btn.disabled = false; btn.textContent = 'Join';
+
+    if (joinErr) {
+      alertEl.textContent = joinErr.message;
+      alertEl.className = 'alert visible alert-error';
+      return;
+    }
+
+    alertEl.textContent = 'Joined "' + (session.label || 'Session') + '" in ' + (session.projects?.name || 'project') + '!';
+    alertEl.className = 'alert visible alert-success';
+    document.getElementById('joinCodeInput').value = '';
+
+    await loadSessions();
+    renderSessions();
+    updateStats();
+    setTimeout(function() { alertEl.className = 'alert'; }, 4000);
+  });
+
   // ── Modals ──
   function openModal(id) { document.getElementById(id).classList.add('visible'); }
   function closeModal(id) { document.getElementById(id).classList.remove('visible'); }
 
   // Create Org
-  document.getElementById('createOrgBtn').addEventListener('click', () => openModal('orgModal'));
-  document.getElementById('createOrgBtn2')?.addEventListener('click', () => openModal('orgModal'));
-  document.getElementById('orgCancel').addEventListener('click', () => closeModal('orgModal'));
+  document.getElementById('createOrgBtn').addEventListener('click', function() { openModal('orgModal'); });
+  document.getElementById('createOrgBtn2')?.addEventListener('click', function() { openModal('orgModal'); });
+  document.getElementById('orgCancel').addEventListener('click', function() { closeModal('orgModal'); });
 
-  document.getElementById('orgForm').addEventListener('submit', async (e) => {
+  document.getElementById('orgForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const name = document.getElementById('orgName').value.trim();
-    const btn = document.getElementById('orgSubmit');
-    const alert = document.getElementById('orgAlert');
+    var name = document.getElementById('orgName').value.trim();
+    var btn = document.getElementById('orgSubmit');
+    var alert = document.getElementById('orgAlert');
     btn.disabled = true; btn.textContent = 'Creating...';
     alert.className = 'alert';
 
-    const { data: org, error } = await sb
-      .from('organizations').insert({ name }).select().single();
+    var { data: org, error } = await sb
+      .from('organizations').insert({ name: name }).select().single();
 
     if (error) {
       alert.textContent = error.message;
@@ -279,7 +595,7 @@
       return;
     }
 
-    const { error: memErr } = await sb.from('org_members').insert({
+    var { error: memErr } = await sb.from('org_members').insert({
       org_id: org.id, user_id: user.id, role: 'owner',
     });
 
@@ -287,7 +603,6 @@
       alert.textContent = 'Org created but failed to add you as owner: ' + memErr.message;
       alert.className = 'alert visible alert-error';
       btn.disabled = false; btn.textContent = 'Create';
-      console.error('[org_members insert]', memErr);
       return;
     }
 
@@ -303,33 +618,33 @@
 
   // Create Project
   function populateOrgSelect() {
-    const sel = document.getElementById('projectOrg');
+    var sel = document.getElementById('projectOrg');
     sel.innerHTML = '<option value="">Select an organization...</option>';
-    orgs.forEach(o => {
-      const opt = document.createElement('option');
+    orgs.forEach(function(o) {
+      var opt = document.createElement('option');
       opt.value = o.id; opt.textContent = o.name;
       sel.appendChild(opt);
     });
   }
   populateOrgSelect();
 
-  document.getElementById('createProjectBtn').addEventListener('click', () => {
+  document.getElementById('createProjectBtn').addEventListener('click', function() {
     if (!orgs.length) { openModal('orgModal'); return; }
     openModal('projectModal');
   });
-  document.getElementById('projectCancel').addEventListener('click', () => closeModal('projectModal'));
+  document.getElementById('projectCancel').addEventListener('click', function() { closeModal('projectModal'); });
 
-  document.getElementById('projectForm').addEventListener('submit', async (e) => {
+  document.getElementById('projectForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const orgId = document.getElementById('projectOrg').value;
-    const name  = document.getElementById('projectName').value.trim();
-    const btn   = document.getElementById('projectSubmit');
-    const alert = document.getElementById('projectAlert');
+    var orgId = document.getElementById('projectOrg').value;
+    var name  = document.getElementById('projectName').value.trim();
+    var btn   = document.getElementById('projectSubmit');
+    var alert = document.getElementById('projectAlert');
     btn.disabled = true; btn.textContent = 'Creating...';
     alert.className = 'alert';
 
-    const { error } = await sb
-      .from('projects').insert({ org_id: orgId, name, created_by: user.id });
+    var { error } = await sb
+      .from('projects').insert({ org_id: orgId, name: name, created_by: user.id });
 
     if (error) {
       alert.textContent = error.message;
@@ -348,15 +663,15 @@
   });
 
   // Close modals on overlay click
-  document.querySelectorAll('.modal-overlay').forEach(el => {
-    el.addEventListener('click', (e) => {
+  document.querySelectorAll('.modal-overlay').forEach(function(el) {
+    el.addEventListener('click', function(e) {
       if (e.target === el) el.classList.remove('visible');
     });
   });
 
   // ── Utilities ──
   function esc(str) {
-    const d = document.createElement('div');
+    var d = document.createElement('div');
     d.textContent = str || '';
     return d.innerHTML;
   }
