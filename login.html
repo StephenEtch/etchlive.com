@@ -133,8 +133,10 @@
   document.getElementById('forgotBtn').addEventListener('click', () => showForm('forgot'));
   document.getElementById('backToLogin').addEventListener('click', () => showForm('signin'));
 
-  // Open signup tab if linked from CTA (?tab=signup)
-  if (params.get('tab') === 'signup') showForm('signup');
+  // Open specific tab if linked (?tab=signup or ?tab=forgot)
+  var tab = params.get('tab');
+  if (tab === 'signup') showForm('signup');
+  if (tab === 'forgot') showForm('forgot');
 
   // Show auth error from redirect (e.g. expired confirmation link)
   var errorMsg = params.get('error');
