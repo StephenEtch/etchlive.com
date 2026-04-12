@@ -213,7 +213,7 @@
       <li>Image &amp; video attachments</li>
       <li>JSON export</li>
     </ul>
-    <a class="pc-cta primary" data-tier="solo" id="ctaSolo" href="#">Get Started</a>
+    <a class="pc-cta primary" data-tier="solo" id="ctaSolo" data-stripe-url="https://buy.stripe.com/test_aFadR95Crb693RfeSe3cc08" href="https://buy.stripe.com/test_aFadR95Crb693RfeSe3cc08">Get Started</a>
   </div>
 
   <!-- Team -->
@@ -232,7 +232,7 @@
       <li>Real-time collaboration</li>
       <li>Priority support</li>
     </ul>
-    <a class="pc-cta primary" data-tier="team" id="ctaTeam" href="#">Get Started</a>
+    <a class="pc-cta primary" data-tier="team" id="ctaTeam" data-stripe-url="https://buy.stripe.com/test_aFa8wP8OD8Y11J74dA3cc07" href="https://buy.stripe.com/test_aFa8wP8OD8Y11J74dA3cc07">Get Started</a>
   </div>
 
   <!-- Production -->
@@ -250,7 +250,7 @@
       <li>Advanced member roles</li>
       <li>Everything in Team</li>
     </ul>
-    <a class="pc-cta primary" data-tier="production" id="ctaProduction" href="#">Get Started</a>
+    <a class="pc-cta primary" data-tier="production" id="ctaProduction" data-stripe-url="https://buy.stripe.com/test_7sY3cv8ODa25bjHh0m3cc06" href="https://buy.stripe.com/test_7sY3cv8ODa25bjHh0m3cc06">Get Started</a>
   </div>
 
 </div>
@@ -331,7 +331,7 @@ document.getElementById('billingSwitch').addEventListener('click', function() {
       el.classList.add('enterprise');
     } else {
       el.textContent = 'Get Started';
-      el.href = '#'; // Will be replaced with Stripe links
+      el.href = el.dataset.stripeUrl || '#';
       el.classList.remove('enterprise');
       el.classList.add('primary');
     }
