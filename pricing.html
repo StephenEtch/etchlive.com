@@ -171,10 +171,10 @@
 
 <!-- ── Billing toggle ── -->
 <div class="billing-toggle">
-  <span class="active" id="toggleMonthly">Monthly</span>
+  <span class="active" id="toggleWeekly">Weekly</span>
   <div class="billing-switch" id="billingSwitch"></div>
   <span id="toggleAnnual">Annual</span>
-  <span class="save-badge">Save 20%</span>
+  <span class="save-badge">Best value</span>
 </div>
 
 <!-- ── Pricing Cards ── -->
@@ -202,8 +202,8 @@
     <div class="pc-name">Solo</div>
     <div class="pc-desc">For freelancers and independent production managers.</div>
     <div class="pc-price">
-      <span class="pc-amount" data-monthly="19" data-annual="15">$19</span>
-      <span class="pc-period">/ month</span>
+      <span class="pc-amount" data-weekly="100">$100</span>
+      <span class="pc-period" data-weekly-label="/ week" data-annual-label="/ year">/ week</span>
     </div>
     <ul class="pc-features">
       <li>1 active seat</li>
@@ -213,7 +213,7 @@
       <li>Image &amp; video attachments</li>
       <li>JSON export</li>
     </ul>
-    <a class="pc-cta primary" data-tier="solo" data-monthly-url="https://buy.stripe.com/test_fZudR9e8X4HL4Vj7pM3cc05" data-annual-url="https://buy.stripe.com/test_4gM6oH5Cr7TX1J79xU3cc04" href="https://buy.stripe.com/test_fZudR9e8X4HL4Vj7pM3cc05">Get Started</a>
+    <a class="pc-cta primary" data-tier="solo" id="ctaSolo" href="#">Get Started</a>
   </div>
 
   <!-- Team -->
@@ -221,8 +221,8 @@
     <div class="pc-name">Team</div>
     <div class="pc-desc">For production teams running rehearsals and shows together.</div>
     <div class="pc-price">
-      <span class="pc-amount" data-monthly="49" data-annual="39">$49</span>
-      <span class="pc-period">/ month</span>
+      <span class="pc-amount" data-weekly="250">$250</span>
+      <span class="pc-period" data-weekly-label="/ week" data-annual-label="/ year">/ week</span>
     </div>
     <ul class="pc-features">
       <li>5 active seats</li>
@@ -232,7 +232,7 @@
       <li>Real-time collaboration</li>
       <li>Priority support</li>
     </ul>
-    <a class="pc-cta primary" data-tier="team" data-monthly-url="https://buy.stripe.com/test_9B63cv5Cr1vzdrP11o3cc02" data-annual-url="https://buy.stripe.com/test_7sY9ATaWLfmpafDbG23cc03" href="https://buy.stripe.com/test_9B63cv5Cr1vzdrP11o3cc02">Get Started</a>
+    <a class="pc-cta primary" data-tier="team" id="ctaTeam" href="#">Get Started</a>
   </div>
 
   <!-- Production -->
@@ -240,8 +240,8 @@
     <div class="pc-name">Production</div>
     <div class="pc-desc">For large crews and production companies with multiple shows.</div>
     <div class="pc-price">
-      <span class="pc-amount" data-monthly="99" data-annual="79">$99</span>
-      <span class="pc-period">/ month</span>
+      <span class="pc-amount" data-weekly="400">$400</span>
+      <span class="pc-period" data-weekly-label="/ week" data-annual-label="/ year">/ week</span>
     </div>
     <ul class="pc-features">
       <li>15 active seats</li>
@@ -250,7 +250,7 @@
       <li>Advanced member roles</li>
       <li>Everything in Team</li>
     </ul>
-    <a class="pc-cta primary" data-tier="production" data-monthly-url="https://buy.stripe.com/test_dRmbJ1d4Tb69gE14dA3cc00" data-annual-url="https://buy.stripe.com/test_8x2bJ18ODb69evTfWi3cc01" href="https://buy.stripe.com/test_dRmbJ1d4Tb69gE14dA3cc00">Get Started</a>
+    <a class="pc-cta primary" data-tier="production" id="ctaProduction" href="#">Get Started</a>
   </div>
 
 </div>
@@ -312,19 +312,29 @@ var isAnnual = false;
 document.getElementById('billingSwitch').addEventListener('click', function() {
   isAnnual = !isAnnual;
   this.classList.toggle('annual', isAnnual);
-  document.getElementById('toggleMonthly').classList.toggle('active', !isAnnual);
+  document.getElementById('toggleWeekly').classList.toggle('active', !isAnnual);
   document.getElementById('toggleAnnual').classList.toggle('active', isAnnual);
-  // Update prices
-  document.querySelectorAll('[data-monthly]').forEach(function(el) {
-    var price = isAnnual ? el.dataset.annual : el.dataset.monthly;
-    el.textContent = '$' + price;
+  // Update prices and period labels
+  document.querySelectorAll('[data-weekly]').forEach(function(el) {
+    el.textContent = isAnnual ? 'Contact us' : '$' + el.dataset.weekly;
   });
-  document.querySelectorAll('.pc-period').forEach(function(el) {
-    if (el.textContent !== '/ forever') el.textContent = '/ month';
+  document.querySelectorAll('.pc-period[data-weekly-label]').forEach(function(el) {
+    el.textContent = isAnnual ? el.dataset.annualLabel : el.dataset.weeklyLabel;
+    el.style.display = isAnnual ? 'none' : '';
   });
-  // Swap payment link URLs
-  document.querySelectorAll('[data-monthly-url]').forEach(function(el) {
-    el.href = isAnnual ? el.dataset.annualUrl : el.dataset.monthlyUrl;
+  // Swap CTA buttons
+  document.querySelectorAll('[data-tier]').forEach(function(el) {
+    if (isAnnual) {
+      el.textContent = 'Get a Quote';
+      el.href = 'mailto:stephen@etchlive.com?subject=Etch Annual Plan — ' + el.dataset.tier.charAt(0).toUpperCase() + el.dataset.tier.slice(1);
+      el.classList.remove('primary');
+      el.classList.add('enterprise');
+    } else {
+      el.textContent = 'Get Started';
+      el.href = '#'; // Will be replaced with Stripe links
+      el.classList.remove('enterprise');
+      el.classList.add('primary');
+    }
   });
 });
 
@@ -338,7 +348,16 @@ document.querySelectorAll('.faq-q').forEach(function(q) {
   });
 });
 
-// Payment links are now direct <a> tags to Stripe Checkout — no JS needed
+// Weekly subscribe buttons — will be wired to Stripe Payment Links
+// You need to create new weekly Payment Links in Stripe and update these URLs
+document.querySelectorAll('[data-tier]').forEach(function(btn) {
+  btn.addEventListener('click', function(e) {
+    if (isAnnual) return; // annual uses mailto
+    if (this.href && this.href !== '#' && !this.href.endsWith('#')) return; // has stripe link
+    e.preventDefault();
+    alert('Payment links coming soon! Create weekly Stripe products and update the URLs.');
+  });
+});
 </script>
 </body>
 </html>
