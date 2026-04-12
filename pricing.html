@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — Etch</title>
+<meta name="description" content="Simple pricing for production teams of any size. Start free, upgrade when you're ready.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+/* ── Pricing-specific styles ── */
+.pricing-hero {
+  text-align: center; padding: 80px 32px 48px;
+}
+.pricing-hero h1 {
+  font-size: 42px; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 12px;
+}
+.pricing-hero p {
+  font-size: 17px; color: var(--text2); max-width: 520px; margin: 0 auto;
+}
+
+/* Billing toggle */
+.billing-toggle {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; margin: 32px 0 48px;
+}
+.billing-toggle span { font-size: 14px; font-weight: 500; color: var(--text3); transition: color 0.2s; }
+.billing-toggle span.active { color: var(--text); }
+.billing-switch {
+  width: 48px; height: 26px; border-radius: 13px;
+  background: var(--border); cursor: pointer; position: relative;
+  transition: background 0.2s;
+}
+.billing-switch.annual { background: var(--accent); }
+.billing-switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; transition: transform 0.2s;
+}
+.billing-switch.annual::after { transform: translateX(22px); }
+.save-badge {
+  font-size: 11px; font-weight: 700; color: var(--accent);
+  background: rgba(212,160,96,0.12); padding: 3px 8px; border-radius: 6px;
+  font-family: var(--mono); letter-spacing: 0.04em;
+}
+
+/* Pricing cards */
+.pricing-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 20px; max-width: 1120px; margin: 0 auto; padding: 0 32px 80px;
+}
+.pricing-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px 28px;
+  display: flex; flex-direction: column;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.pricing-card:hover {
+  border-color: rgba(212,160,96,0.3);
+  box-shadow: 0 0 40px rgba(212,160,96,0.06);
+}
+.pricing-card.featured {
+  border-color: var(--accent);
+  box-shadow: 0 0 40px rgba(212,160,96,0.1);
+  position: relative;
+}
+.pricing-card.featured::before {
+  content: 'Most Popular'; position: absolute; top: -12px; left: 50%;
+  transform: translateX(-50%); padding: 4px 14px; border-radius: 20px;
+  background: var(--accent); color: #0c0a08;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  font-family: var(--mono); white-space: nowrap;
+}
+.pc-name {
+  font-size: 18px; font-weight: 700; margin-bottom: 4px;
+}
+.pc-desc {
+  font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.5;
+}
+.pc-price {
+  margin-bottom: 24px;
+}
+.pc-amount {
+  font-size: 36px; font-weight: 900; letter-spacing: -0.03em;
+}
+.pc-period {
+  font-size: 14px; color: var(--text3); font-weight: 400;
+}
+.pc-features {
+  list-style: none; flex: 1; margin-bottom: 24px;
+}
+.pc-features li {
+  font-size: 14px; color: var(--text2); padding: 6px 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.pc-features li::before {
+  content: '✓'; color: var(--accent); font-weight: 700; font-size: 13px;
+}
+.pc-cta {
+  width: 100%; padding: 14px; border-radius: 10px;
+  font-family: var(--sans); font-size: 15px; font-weight: 600;
+  border: none; cursor: pointer; transition: all 0.2s;
+  text-align: center; text-decoration: none; display: block;
+}
+.pc-cta.primary {
+  background: var(--accent); color: #0c0a08;
+}
+.pc-cta.primary:hover { background: #e0a858; }
+.pc-cta.secondary {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+}
+.pc-cta.secondary:hover { background: var(--border); }
+.pc-cta.enterprise {
+  background: none; color: var(--accent); border: 1px solid var(--accent);
+}
+.pc-cta.enterprise:hover { background: rgba(212,160,96,0.1); }
+
+/* FAQ */
+.faq-section {
+  max-width: 700px; margin: 0 auto; padding: 0 32px 80px;
+}
+.faq-title {
+  font-size: 28px; font-weight: 800; letter-spacing: -0.03em;
+  text-align: center; margin-bottom: 40px;
+}
+.faq-item {
+  border-bottom: 1px solid var(--border); padding: 20px 0;
+}
+.faq-q {
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.faq-q::after { content: '+'; font-size: 20px; color: var(--text3); transition: transform 0.2s; }
+.faq-item.open .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  font-size: 14px; color: var(--text2); line-height: 1.7;
+  max-height: 0; overflow: hidden; transition: max-height 0.3s, padding 0.3s;
+}
+.faq-item.open .faq-a { max-height: 200px; padding-top: 12px; }
+
+@media (max-width: 900px) {
+  .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .pricing-grid { grid-template-columns: 1fr; padding: 0 16px 60px; }
+  .pricing-hero { padding: 60px 16px 32px; }
+  .pricing-hero h1 { font-size: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav class="app-nav">
+  <div class="app-nav-inner">
+    <a href="/" class="app-nav-logo">Etch</a>
+    <div class="app-nav-links">
+      <a href="/#features">Features</a>
+      <a href="/pricing.html" style="color:var(--text);">Pricing</a>
+      <a href="/login.html" class="nav-btn" data-auth-link>Login</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="pricing-hero">
+  <h1>Simple pricing for every crew size</h1>
+  <p>Start with Example Mode for free. When you're ready to run real shows, pick the plan that fits your team.</p>
+</div>
+
+<!-- ── Billing toggle ── -->
+<div class="billing-toggle">
+  <span class="active" id="toggleMonthly">Monthly</span>
+  <div class="billing-switch" id="billingSwitch"></div>
+  <span id="toggleAnnual">Annual</span>
+  <span class="save-badge">Save 20%</span>
+</div>
+
+<!-- ── Pricing Cards ── -->
+<div class="pricing-grid">
+
+  <!-- Free -->
+  <div class="pricing-card">
+    <div class="pc-name">Free</div>
+    <div class="pc-desc">Try Etch with the built-in example project. No account needed.</div>
+    <div class="pc-price">
+      <span class="pc-amount">$0</span>
+      <span class="pc-period">/ forever</span>
+    </div>
+    <ul class="pc-features">
+      <li>Example Mode with demo data</li>
+      <li>All views (Compact, Timeline, Board, Review)</li>
+      <li>Full UI experience</li>
+      <li>No saving or cloud sync</li>
+    </ul>
+    <a href="/login.html?tab=signup" class="pc-cta secondary">Try Example Mode</a>
+  </div>
+
+  <!-- Solo -->
+  <div class="pricing-card">
+    <div class="pc-name">Solo</div>
+    <div class="pc-desc">For freelancers and independent production managers.</div>
+    <div class="pc-price">
+      <span class="pc-amount" data-monthly="19" data-annual="15">$19</span>
+      <span class="pc-period">/ month</span>
+    </div>
+    <ul class="pc-features">
+      <li>1 active seat</li>
+      <li>5 GB storage</li>
+      <li>Unlimited projects</li>
+      <li>Real-time sync</li>
+      <li>Image &amp; video attachments</li>
+      <li>JSON export</li>
+    </ul>
+    <button class="pc-cta primary" data-tier="solo">Get Started</button>
+  </div>
+
+  <!-- Team -->
+  <div class="pricing-card featured">
+    <div class="pc-name">Team</div>
+    <div class="pc-desc">For production teams running rehearsals and shows together.</div>
+    <div class="pc-price">
+      <span class="pc-amount" data-monthly="49" data-annual="39">$49</span>
+      <span class="pc-period">/ month</span>
+    </div>
+    <ul class="pc-features">
+      <li>5 active seats</li>
+      <li>25 GB storage</li>
+      <li>Unlimited projects</li>
+      <li>Team member management</li>
+      <li>Real-time collaboration</li>
+      <li>Priority support</li>
+    </ul>
+    <button class="pc-cta primary" data-tier="team">Get Started</button>
+  </div>
+
+  <!-- Production -->
+  <div class="pricing-card">
+    <div class="pc-name">Production</div>
+    <div class="pc-desc">For large crews and production companies with multiple shows.</div>
+    <div class="pc-price">
+      <span class="pc-amount" data-monthly="99" data-annual="79">$99</span>
+      <span class="pc-period">/ month</span>
+    </div>
+    <ul class="pc-features">
+      <li>15 active seats</li>
+      <li>100 GB storage</li>
+      <li>Unlimited projects</li>
+      <li>Advanced member roles</li>
+      <li>Everything in Team</li>
+    </ul>
+    <button class="pc-cta primary" data-tier="production">Get Started</button>
+  </div>
+
+</div>
+
+<!-- ── Enterprise callout ── -->
+<div style="text-align:center; padding:0 32px 80px;">
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; max-width:700px; margin:0 auto;">
+    <div style="font-size:20px; font-weight:700; margin-bottom:8px;">Enterprise</div>
+    <div style="font-size:15px; color:var(--text2); margin-bottom:20px;">Unlimited seats, 500GB+ storage, dedicated support, and custom onboarding for large production companies.</div>
+    <a href="mailto:stephen@etchlive.com" class="pc-cta enterprise" style="max-width:240px; margin:0 auto;">Contact Us</a>
+  </div>
+</div>
+
+<!-- ── FAQ ── -->
+<div class="faq-section">
+  <div class="faq-title">Frequently asked questions</div>
+
+  <div class="faq-item">
+    <div class="faq-q">What counts as an active seat?</div>
+    <div class="faq-a">An active seat is someone with the Etch desktop app open and connected. When they close the app, the seat frees up. You can have unlimited members in your organization — seats only count who's using the app simultaneously.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Can I try Etch before paying?</div>
+    <div class="faq-a">Yes. Example Mode lets you explore the full UI with demo data — no account or payment needed. When you're ready to use Etch on a real show, sign up and pick a plan.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">What happens if all seats are in use?</div>
+    <div class="faq-a">If someone tries to open the app when all seats are taken, they'll see a message to wait or ask a team member to close the app. You can always upgrade your plan for more seats.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">What counts toward storage?</div>
+    <div class="faq-a">Image and video attachments on notes use storage. Text notes, setlists, and session data are tiny and don't count toward your limit. Images are automatically compressed on upload to save space.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Can I change plans later?</div>
+    <div class="faq-a">Yes. Upgrade or downgrade anytime from your dashboard. Changes take effect immediately, and billing is prorated.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Who manages the billing?</div>
+    <div class="faq-a">The organization owner handles billing. One subscription covers the whole team — no per-user accounts to manage.</div>
+  </div>
+</div>
+
+<footer class="app-footer">&copy; 2026 Etch. All rights reserved.</footer>
+
+<!-- ── Scripts ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-init.js"></script>
+<script>
+updateNavAuth();
+
+// Billing toggle
+var isAnnual = false;
+document.getElementById('billingSwitch').addEventListener('click', function() {
+  isAnnual = !isAnnual;
+  this.classList.toggle('annual', isAnnual);
+  document.getElementById('toggleMonthly').classList.toggle('active', !isAnnual);
+  document.getElementById('toggleAnnual').classList.toggle('active', isAnnual);
+  // Update prices
+  document.querySelectorAll('[data-monthly]').forEach(function(el) {
+    var price = isAnnual ? el.dataset.annual : el.dataset.monthly;
+    el.textContent = '$' + price;
+  });
+  document.querySelectorAll('.pc-period').forEach(function(el) {
+    if (el.textContent !== '/ forever') el.textContent = '/ month';
+  });
+});
+
+// FAQ accordion
+document.querySelectorAll('.faq-q').forEach(function(q) {
+  q.addEventListener('click', function() {
+    var item = this.closest('.faq-item');
+    var wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(function(i) { i.classList.remove('open'); });
+    if (!wasOpen) item.classList.add('open');
+  });
+});
+
+// Subscribe buttons (will wire to Stripe Checkout later)
+document.querySelectorAll('[data-tier]').forEach(function(btn) {
+  btn.addEventListener('click', async function() {
+    var tier = this.dataset.tier;
+    // Check if logged in
+    var session = await getSession();
+    if (!session) {
+      window.location.href = '/login.html?redirect=' + encodeURIComponent('/pricing.html');
+      return;
+    }
+    // TODO: Call Supabase Edge Function to create Stripe Checkout session
+    alert('Stripe integration coming soon! You selected the ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' plan.');
+  });
+});
+</script>
+</body>
+</html>
