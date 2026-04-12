@@ -213,7 +213,7 @@
       <li>Image &amp; video attachments</li>
       <li>JSON export</li>
     </ul>
-    <button class="pc-cta primary" data-tier="solo">Get Started</button>
+    <a class="pc-cta primary" data-tier="solo" data-monthly-url="https://buy.stripe.com/test_fZudR9e8X4HL4Vj7pM3cc05" data-annual-url="https://buy.stripe.com/test_4gM6oH5Cr7TX1J79xU3cc04" href="https://buy.stripe.com/test_fZudR9e8X4HL4Vj7pM3cc05">Get Started</a>
   </div>
 
   <!-- Team -->
@@ -232,7 +232,7 @@
       <li>Real-time collaboration</li>
       <li>Priority support</li>
     </ul>
-    <button class="pc-cta primary" data-tier="team">Get Started</button>
+    <a class="pc-cta primary" data-tier="team" data-monthly-url="https://buy.stripe.com/test_9B63cv5Cr1vzdrP11o3cc02" data-annual-url="https://buy.stripe.com/test_7sY9ATaWLfmpafDbG23cc03" href="https://buy.stripe.com/test_9B63cv5Cr1vzdrP11o3cc02">Get Started</a>
   </div>
 
   <!-- Production -->
@@ -250,7 +250,7 @@
       <li>Advanced member roles</li>
       <li>Everything in Team</li>
     </ul>
-    <button class="pc-cta primary" data-tier="production">Get Started</button>
+    <a class="pc-cta primary" data-tier="production" data-monthly-url="https://buy.stripe.com/test_dRmbJ1d4Tb69gE14dA3cc00" data-annual-url="https://buy.stripe.com/test_8x2bJ18ODb69evTfWi3cc01" href="https://buy.stripe.com/test_dRmbJ1d4Tb69gE14dA3cc00">Get Started</a>
   </div>
 
 </div>
@@ -322,6 +322,10 @@ document.getElementById('billingSwitch').addEventListener('click', function() {
   document.querySelectorAll('.pc-period').forEach(function(el) {
     if (el.textContent !== '/ forever') el.textContent = '/ month';
   });
+  // Swap payment link URLs
+  document.querySelectorAll('[data-monthly-url]').forEach(function(el) {
+    el.href = isAnnual ? el.dataset.annualUrl : el.dataset.monthlyUrl;
+  });
 });
 
 // FAQ accordion
@@ -334,20 +338,7 @@ document.querySelectorAll('.faq-q').forEach(function(q) {
   });
 });
 
-// Subscribe buttons (will wire to Stripe Checkout later)
-document.querySelectorAll('[data-tier]').forEach(function(btn) {
-  btn.addEventListener('click', async function() {
-    var tier = this.dataset.tier;
-    // Check if logged in
-    var session = await getSession();
-    if (!session) {
-      window.location.href = '/login.html?redirect=' + encodeURIComponent('/pricing.html');
-      return;
-    }
-    // TODO: Call Supabase Edge Function to create Stripe Checkout session
-    alert('Stripe integration coming soon! You selected the ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' plan.');
-  });
-});
+// Payment links are now direct <a> tags to Stripe Checkout — no JS needed
 </script>
 </body>
 </html>
