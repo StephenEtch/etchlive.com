@@ -371,7 +371,7 @@
     var tier = currentOrg.subscription_tier || 'free';
     var status = currentOrg.subscription_status || 'inactive';
     var seatsAllowed = currentOrg.seats_allowed || 0;
-    var storageBytesAllowed = currentOrg.storage_bytes_allowed || 0;
+    var storageBytesAllowed = parseInt(currentOrg.storage_bytes_allowed) || 0;
 
     // Plan name
     var tierNames = { free: 'Free', solo: 'Solo', team: 'Team', production: 'Production', enterprise: 'Enterprise' };
@@ -412,7 +412,7 @@
     var storageLabel = storageUsedMB < 1024
       ? storageUsedMB.toFixed(1) + ' MB / ' + storageAllowedGB.toFixed(0) + ' GB'
       : (storageUsedMB / 1024).toFixed(1) + ' GB / ' + storageAllowedGB.toFixed(0) + ' GB';
-    document.getElementById('storageCount').textContent = seatsAllowed > 0 ? storageLabel : '— / —';
+    document.getElementById('storageCount').textContent = storageBytesAllowed > 0 ? storageLabel : '— / —';
     var storagePct = storageBytesAllowed > 0 ? Math.min(100, (storageUsed / storageBytesAllowed) * 100) : 0;
     document.getElementById('storageBar').style.width = storagePct + '%';
     document.getElementById('storageBar').style.background = storagePct > 90 ? 'var(--danger)' : 'var(--accent)';

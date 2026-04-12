@@ -256,7 +256,7 @@
     alert.className = 'alert';
 
     // Delete profile (cascade should handle related data)
-    const { error: profileErr } = await supabase
+    const { error: profileErr } = await sb
       .from('profiles').delete().eq('id', user.id);
 
     if (profileErr) {

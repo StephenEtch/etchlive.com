@@ -316,11 +316,10 @@ document.getElementById('billingSwitch').addEventListener('click', function() {
   document.getElementById('toggleAnnual').classList.toggle('active', isAnnual);
   // Update prices and period labels
   document.querySelectorAll('[data-weekly]').forEach(function(el) {
-    el.textContent = isAnnual ? 'Contact us' : '$' + el.dataset.weekly;
+    el.textContent = isAnnual ? 'Custom' : '$' + el.dataset.weekly;
   });
   document.querySelectorAll('.pc-period[data-weekly-label]').forEach(function(el) {
-    el.textContent = isAnnual ? el.dataset.annualLabel : el.dataset.weeklyLabel;
-    el.style.display = isAnnual ? 'none' : '';
+    el.textContent = isAnnual ? '/ year' : el.dataset.weeklyLabel;
   });
   // Swap CTA buttons
   document.querySelectorAll('[data-tier]').forEach(function(el) {
