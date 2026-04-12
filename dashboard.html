@@ -83,6 +83,47 @@
     </div>
   </div>
 
+  <!-- ═══ Subscription ═══ -->
+  <div class="dash-section" id="billingSection" style="display:none;">
+    <div class="section-header">
+      <div>
+        <div class="section-label">Subscription</div>
+        <div class="section-title">Your plan</div>
+      </div>
+    </div>
+    <div class="settings-section" style="margin-bottom:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:20px;font-weight:700;" id="planName">Free</div>
+          <div class="card-meta" id="planStatus">No active subscription</div>
+        </div>
+        <div style="display:flex;gap:8px;" id="planActions">
+          <a href="/pricing.html" class="btn btn-primary" id="upgradeBtn">Upgrade</a>
+        </div>
+      </div>
+      <!-- Seats -->
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+          <span style="color:var(--text2);">Active seats</span>
+          <span id="seatCount" style="font-family:var(--mono);color:var(--text);">0 / 0</span>
+        </div>
+        <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+          <div id="seatBar" style="height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+      <!-- Storage -->
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+          <span style="color:var(--text2);">Storage used</span>
+          <span id="storageCount" style="font-family:var(--mono);color:var(--text);">0 MB / 0 GB</span>
+        </div>
+        <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+          <div id="storageBar" style="height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ Projects ═══ -->
   <div class="dash-section">
     <div class="section-header">
@@ -184,7 +225,7 @@
   async function loadOrg() {
     var { data, error } = await sb
       .from('org_members')
-      .select('org_id, role, organizations(id, name, invite_code, created_at)')
+      .select('org_id, role, organizations(id, name, invite_code, created_at, subscription_tier, subscription_status, seats_allowed, storage_bytes_allowed, billing_period_end)')
       .eq('user_id', user.id)
       .limit(1)
       .single();
@@ -319,6 +360,63 @@
   renderOrg();
   renderMembers();
   renderProjects();
+  renderBilling();
+
+  // ── Render: Billing ──
+  async function renderBilling() {
+    var section = document.getElementById('billingSection');
+    if (!currentOrg) { section.style.display = 'none'; return; }
+    section.style.display = '';
+
+    var tier = currentOrg.subscription_tier || 'free';
+    var status = currentOrg.subscription_status || 'inactive';
+    var seatsAllowed = currentOrg.seats_allowed || 0;
+    var storageBytesAllowed = currentOrg.storage_bytes_allowed || 0;
+
+    // Plan name
+    var tierNames = { free: 'Free', solo: 'Solo', team: 'Team', production: 'Production', enterprise: 'Enterprise' };
+    document.getElementById('planName').textContent = tierNames[tier] || 'Free';
+
+    // Status
+    var statusText = 'No active subscription';
+    if (status === 'active') statusText = 'Active';
+    else if (status === 'past_due') statusText = 'Payment past due';
+    else if (status === 'canceled') statusText = 'Canceled';
+    document.getElementById('planStatus').textContent = statusText;
+
+    // Upgrade button
+    var upgradeBtn = document.getElementById('upgradeBtn');
+    if (status === 'active' && tier !== 'free') {
+      upgradeBtn.textContent = 'Manage Plan';
+      // TODO: link to Stripe Customer Portal when available
+    } else {
+      upgradeBtn.textContent = 'Upgrade';
+      upgradeBtn.href = '/pricing.html';
+    }
+
+    // Seats
+    var memberCount = orgMembers.length || 0;
+    document.getElementById('seatCount').textContent = memberCount + ' / ' + (seatsAllowed || '0');
+    var seatPct = seatsAllowed > 0 ? Math.min(100, (memberCount / seatsAllowed) * 100) : 0;
+    document.getElementById('seatBar').style.width = seatPct + '%';
+    document.getElementById('seatBar').style.background = seatPct > 90 ? 'var(--danger)' : 'var(--accent)';
+
+    // Storage — query total from note_attachments
+    var storageUsed = 0;
+    if (currentOrg) {
+      var { data: storageData } = await sb.rpc('get_org_storage_bytes', { org_uuid: currentOrg.id }).catch(function() { return { data: null }; });
+      if (storageData !== null && storageData !== undefined) storageUsed = storageData;
+    }
+    var storageAllowedGB = storageBytesAllowed / (1024 * 1024 * 1024);
+    var storageUsedMB = storageUsed / (1024 * 1024);
+    var storageLabel = storageUsedMB < 1024
+      ? storageUsedMB.toFixed(1) + ' MB / ' + storageAllowedGB.toFixed(0) + ' GB'
+      : (storageUsedMB / 1024).toFixed(1) + ' GB / ' + storageAllowedGB.toFixed(0) + ' GB';
+    document.getElementById('storageCount').textContent = seatsAllowed > 0 ? storageLabel : '— / —';
+    var storagePct = storageBytesAllowed > 0 ? Math.min(100, (storageUsed / storageBytesAllowed) * 100) : 0;
+    document.getElementById('storageBar').style.width = storagePct + '%';
+    document.getElementById('storageBar').style.background = storagePct > 90 ? 'var(--danger)' : 'var(--accent)';
+  }
 
   // ── Event delegation ──
   document.addEventListener('click', async function(e) {
