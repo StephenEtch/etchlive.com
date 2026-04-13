@@ -305,7 +305,8 @@
     var isOwner = currentOrg && currentOrg.role === 'owner';
     list.innerHTML = '<ul class="member-list">' + orgMembers.map(function(m) {
       var initial = (m.name || '?').charAt(0).toUpperCase();
-      var color = m.avatar_color || '#6b7280';
+      var rawColor = m.avatar_color || '#6b7280';
+      var color = /^#[0-9a-fA-F]{3,8}$/.test(rawColor) ? rawColor : '#6b7280';
       return '<li class="member-item">' +
         '<div class="member-info">' +
           '<div class="member-avatar" style="background:' + color + '">' + initial + '</div>' +

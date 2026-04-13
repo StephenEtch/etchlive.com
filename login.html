@@ -100,7 +100,9 @@
 
   // URL params
   const params   = new URLSearchParams(window.location.search);
-  const redirect = params.get('redirect') || '/dashboard.html';
+  const rawRedirect = params.get('redirect') || '/dashboard.html';
+  // Prevent open redirect — only allow same-origin paths
+  const redirect = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/dashboard.html';
 
   // If already logged in, go to dashboard
   getSession().then(s => { if (s) window.location.href = redirect; });
@@ -195,15 +197,10 @@
       return;
     }
 
-    // Detect existing account — Supabase returns empty identities for repeated signup
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      showAlert('An account with this email already exists. Try signing in instead.', 'error');
-      return;
-    }
-
-    // If email confirmation is required
-    if (data.user && !data.session) {
-      showAlert('Account created! Check your email to confirm, then sign in.', 'success');
+    // Detect existing account OR email confirmation required — same message for both
+    // (prevents user enumeration by not revealing whether an email is registered)
+    if (data.user && (!data.session || (data.user.identities && data.user.identities.length === 0))) {
+      showAlert('Check your email for next steps. If you already have an account, try signing in.', 'success');
       return;
     }
 

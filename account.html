@@ -255,12 +255,11 @@
     deleteSubmit.textContent = 'Deleting...';
     alert.className = 'alert';
 
-    // Delete profile (cascade should handle related data)
-    const { error: profileErr } = await sb
-      .from('profiles').delete().eq('id', user.id);
+    // Delete all user data via server-side function
+    const { error: deleteErr } = await sb.rpc('delete_user_account', { target_user_id: user.id });
 
-    if (profileErr) {
-      alert.textContent = 'Failed to delete account: ' + profileErr.message;
+    if (deleteErr) {
+      alert.textContent = 'Failed to delete account: ' + deleteErr.message;
       alert.className = 'alert visible alert-error';
       deleteSubmit.disabled = false;
       deleteSubmit.textContent = 'Delete My Account';

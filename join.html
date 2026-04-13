@@ -57,9 +57,9 @@
 
   updateNavAuth();
 
-  if (!code) {
-    info.textContent = 'No invite code provided.';
-    alertEl.textContent = 'This link is missing an invite code.';
+  if (!code || code.length > 20 || !/^[A-Za-z0-9]+$/.test(code)) {
+    info.textContent = 'Invalid invite link.';
+    alertEl.textContent = code ? 'This invite code is invalid.' : 'This link is missing an invite code.';
     alertEl.className = 'alert visible alert-error';
     return;
   }
