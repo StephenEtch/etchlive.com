@@ -472,17 +472,21 @@
     // Project edit
     if (t.dataset.editProj) {
       var ef = document.querySelector('[data-editform-proj="' + t.dataset.editProj + '"]');
+      if (!ef) return;
       ef.style.display = 'flex';
-      ef.querySelector('input').focus();
+      var inp = ef.querySelector('input');
+      if (inp) inp.focus();
       return;
     }
     if (t.dataset.cancelProj) {
-      document.querySelector('[data-editform-proj="' + t.dataset.cancelProj + '"]').style.display = 'none';
+      var ef2 = document.querySelector('[data-editform-proj="' + t.dataset.cancelProj + '"]');
+      if (ef2) ef2.style.display = 'none';
       return;
     }
     if (t.dataset.saveProj) {
       var pid = t.dataset.saveProj;
       var pinput = document.querySelector('[data-editform-proj="' + pid + '"] input');
+      if (!pinput) return;
       var pName = pinput.value.trim();
       if (!pName) return;
       t.disabled = true; t.textContent = '...';

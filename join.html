@@ -113,8 +113,6 @@
     var btn = this;
     btn.disabled = true; btn.textContent = 'Joining...';
 
-    var profile = await getProfile(user.id);
-
     var { error: joinErr } = await sb.from('org_members').insert({
       org_id: org.id,
       user_id: user.id,
