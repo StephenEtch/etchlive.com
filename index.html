@@ -765,9 +765,6 @@ footer {
         <div id="comingSoonHero">
           <p class="hero-desc" style="font-size:clamp(24px,4vw,36px); font-weight:700; color:var(--text); margin-bottom:12px;">Coming Soon</p>
           <p class="hero-desc">We're building something for production crews who are tired of spreadsheets and group chats.</p>
-          <div class="hero-actions">
-            <button class="btn-primary" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">Get Notified</button>
-          </div>
         </div>
         <!-- Full site hero (hidden until unlocked) -->
         <div id="fullSiteHero" style="display:none;">
@@ -782,41 +779,11 @@ footer {
   </div>
 </div>
 
-<!-- ══════════ COMING SOON (shown when locked) ══════════ -->
-<section class="cta-section" id="cta" style="padding:80px 32px;">
-  <div class="container" style="text-align:center;">
-    <div class="section-label">Early access</div>
-    <div class="section-title">Stay in the loop.</div>
-    <div class="section-desc" style="margin:0 auto 40px;">Drop your email and we'll let you know when Etch is ready.</div>
-    <form id="coming-soon-signup" action="https://formspree.io/f/meepyeag" method="POST" style="display:flex; gap:12px; max-width:440px; margin:0 auto;">
-      <input type="email" name="email" placeholder="you@production.com" required style="
-        flex:1; padding:14px 18px; border-radius:10px;
-        border:1px solid var(--border); background:var(--surface);
-        color:var(--text); font-family:var(--sans); font-size:15px;
-        outline:none; transition:border-color 0.2s;
-      " onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-      <input type="hidden" name="_subject" value="Etch Coming Soon Signup">
-      <button type="submit" class="btn-primary" style="white-space:nowrap;">Notify Me</button>
-    </form>
-    <script>
-    document.getElementById('coming-soon-signup').addEventListener('submit', function(e) {
-      e.preventDefault();
-      var form = this, btn = form.querySelector('button'), input = form.querySelector('input[type="email"]');
-      btn.disabled = true; btn.textContent = 'Sending...';
-      fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json' }
-      }).then(function(r) {
-        if (r.ok) { btn.textContent = "You're on the list!"; input.disabled = true; }
-        else { btn.textContent = 'Try again'; btn.disabled = false; }
-      }).catch(function() { btn.textContent = 'Try again'; btn.disabled = false; });
-    });
-    </script>
-  </div>
-</section>
-
+<!-- ══════════ COMING SOON FOOTER (shown when locked) ══════════ -->
 <footer id="comingSoonFooter">
   <div class="footer-inner">
     <div class="footer-logo" style="color:var(--accent); font-weight:900; font-size:18px;">Etch</div>
-    <div class="footer-copy">&copy; 2026 Etch. All rights reserved. Founded by Stephen Hedges.</div>
+    <div class="footer-copy">&copy; 2026 Etch. All rights reserved.</div>
   </div>
 </footer>
 
@@ -1457,11 +1424,6 @@ updateNavAuth();
     document.getElementById('fullSiteHero').style.display = '';
     // Hide coming soon footer
     document.getElementById('comingSoonFooter').style.display = 'none';
-    // Hide the coming soon CTA section (the one outside fullSiteContent)
-    var comingCta = document.getElementById('cta');
-    if (comingCta && comingCta.closest('#fullSiteContent') === null) {
-      comingCta.style.display = 'none';
-    }
     // Show nav
     var nav = document.querySelector('nav');
     if (nav) nav.style.display = '';
