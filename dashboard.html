@@ -72,6 +72,8 @@
             <code class="invite-code" id="inviteLink" title="Click to copy" style="flex:1;text-align:left;font-size:13px;letter-spacing:0.02em;word-break:break-all;"></code>
             <button class="btn btn-secondary" id="copyInviteBtn" style="white-space:nowrap;">Copy Link</button>
           </div>
+          <!-- Seat-status warning — shown when at cap / no active sub. Filled by JS. -->
+          <div id="inviteSeatWarning" class="alert alert-warn" style="display:none;margin-top:10px;font-size:13px;padding:10px 12px;border-radius:6px;"></div>
         </div>
 
         <!-- Members -->
@@ -401,6 +403,26 @@
     var seatPct = seatsAllowed > 0 ? Math.min(100, (memberCount / seatsAllowed) * 100) : 0;
     document.getElementById('seatBar').style.width = seatPct + '%';
     document.getElementById('seatBar').style.background = seatPct > 90 ? 'var(--danger)' : 'var(--accent)';
+
+    // Invite-link warning — flag when new members can't join
+    var warnEl = document.getElementById('inviteSeatWarning');
+    if (warnEl) {
+      var warning = null;
+      if (seatsAllowed === 0 || status !== 'active') {
+        warning = 'This organization doesn\'t have an active subscription — new members can\'t join until you upgrade.';
+      } else if (memberCount >= seatsAllowed) {
+        warning = 'Seat limit reached (' + memberCount + ' / ' + seatsAllowed + '). Upgrade the plan to invite more members.';
+      }
+      if (warning) {
+        warnEl.textContent = warning;
+        warnEl.style.display = '';
+        warnEl.style.background = 'rgba(224, 96, 48, 0.1)';
+        warnEl.style.border = '1px solid rgba(224, 96, 48, 0.3)';
+        warnEl.style.color = '#8a4020';
+      } else {
+        warnEl.style.display = 'none';
+      }
+    }
 
     // Storage — query total from note_attachments
     var storageUsed = 0;

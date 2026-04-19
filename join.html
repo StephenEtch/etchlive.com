@@ -105,6 +105,31 @@
     return;
   }
 
+  // Check seat availability BEFORE showing the join button. Server-side
+  // trigger (enforce_org_seat_limit) is the real guard — this is UX.
+  var seatOk = true;
+  var seatReason = '';
+  try {
+    var { data: avail } = await sb.rpc('org_seat_availability', { org_uuid: org.id });
+    if (avail && avail.length) {
+      seatOk     = !!avail[0].available;
+      seatReason = avail[0].reason || '';
+    }
+  } catch(e) { /* if RPC fails, fall through and let server reject */ }
+
+  if (!seatOk) {
+    info.textContent = 'This organization can\'t accept new members right now.';
+    alertEl.textContent = seatReason === 'Seat limit reached'
+      ? org.name + ' has reached its seat limit. Ask the admin to upgrade the plan before trying again.'
+      : seatReason === 'No active subscription'
+        ? org.name + ' doesn\'t have an active subscription. The admin needs to start one before you can join.'
+        : seatReason === 'Subscription inactive (past_due)'
+          ? org.name + '\'s subscription is past due. The admin needs to update billing before new members can join.'
+          : 'Can\'t join right now — ' + (seatReason || 'unknown reason') + '.';
+    alertEl.className = 'alert visible alert-error';
+    return;
+  }
+
   // Ready to join
   document.getElementById('joinReady').style.display = '';
   document.getElementById('joinReadyText').textContent = 'Join "' + org.name + '" as a team member? You\'ll be able to access all projects in this organization.';
@@ -120,7 +145,13 @@
     });
 
     if (joinErr) {
-      alertEl.textContent = joinErr.message;
+      // Translate the server-side seat-enforcement error into something
+      // friendly. Trigger raises with a recognizable prefix.
+      var msg = joinErr.message || 'Failed to join.';
+      if (/seat limit/i.test(msg))             msg = org.name + ' reached its seat limit. Ask the admin to upgrade before joining.';
+      else if (/active subscription/i.test(msg)) msg = org.name + ' needs an active subscription before inviting members.';
+      else if (/not active/i.test(msg))        msg = 'The organization\'s subscription is inactive. The admin needs to fix billing first.';
+      alertEl.textContent = msg;
       alertEl.className = 'alert visible alert-error';
       btn.disabled = false; btn.textContent = 'Join Organization';
       return;
