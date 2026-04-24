@@ -1236,15 +1236,29 @@ footer {
   function lockScroll() {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
   }
   function unlockScroll() {
     document.body.style.overflow = '';
     document.documentElement.style.overflow = '';
+    document.body.style.touchAction = '';
+  }
+
+  function keyHandler(e) {
+    if (autoplayDone || autoplayRunning) return;
+    if (['ArrowDown','PageDown','Space',' ','End','ArrowUp','PageUp','Home'].indexOf(e.key) !== -1) {
+      e.preventDefault();
+      runAutoplay();
+    }
+  }
+
+  function removeFirstScrollListeners() {
+    window.removeEventListener('wheel', triggerAutoplay);
+    window.removeEventListener('touchmove', triggerAutoplay);
+    window.removeEventListener('keydown', keyHandler);
   }
 
   function enableScrubMode() {
-    autoplayDone = true;
-    sessionStorage.setItem('etch_hero_played', '1');
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
   }
@@ -1252,18 +1266,19 @@ footer {
   function runAutoplay() {
     if (autoplayRunning || autoplayDone) return;
     autoplayRunning = true;
+    autoplayDone = true;                                 // set early — prevents any re-entry
+    sessionStorage.setItem('etch_hero_played', '1');
+    removeFirstScrollListeners();                        // kill listeners immediately
     hint.classList.remove('visible');
     lockScroll();
 
     const start = performance.now();
     function tick(now) {
       const t = Math.min(1, (now - start) / AUTOPLAY_DURATION_MS);
-      // Ease-out for nicer finish
-      const eased = 1 - Math.pow(1 - t, 2);
+      const eased = 1 - Math.pow(1 - t, 2);              // ease-out
       const frameIndex = Math.min(FRAME_COUNT - 1, Math.floor(eased * FRAME_COUNT));
       drawFrame(frameIndex, true);
 
-      // Fade hero text in on the last 15% of the autoplay
       const heroOpacity = Math.max(0, Math.min(1, (eased - HERO_FADE_AT) / (1 - HERO_FADE_AT)));
       hero.style.opacity = heroOpacity;
       if (heroOpacity > 0) {
@@ -1274,17 +1289,26 @@ footer {
       if (t < 1) {
         requestAnimationFrame(tick);
       } else {
-        // Finish: draw last frame, snap scroll to flipbook end, release scroll
+        // Done — draw final frame, jump (not smooth) to flipbook end, hand off to scrub
         drawFrame(FRAME_COUNT - 1, true);
         hero.style.opacity = 1;
         hero.classList.add('visible');
         navEl.classList.add('visible');
 
-        const maxScroll = wrapper.offsetHeight - stableVH;
+        // Jump scroll position WITHOUT triggering scroll-behavior:smooth,
+        // otherwise the smooth-scroll animation re-scrubs the frames and it looks
+        // like the animation plays a second time.
+        const prevBehavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
         unlockScroll();
+        const maxScroll = wrapper.offsetHeight - stableVH;
         window.scrollTo(0, maxScroll);
-        autoplayRunning = false;
-        enableScrubMode();
+        // Restore smooth scroll after the browser commits the jump
+        requestAnimationFrame(function() {
+          document.documentElement.style.scrollBehavior = prevBehavior;
+          autoplayRunning = false;
+          enableScrubMode();
+        });
       }
     }
     requestAnimationFrame(tick);
@@ -1299,16 +1323,7 @@ footer {
   function attachFirstScrollListeners() {
     window.addEventListener('wheel', triggerAutoplay, { passive: false });
     window.addEventListener('touchmove', triggerAutoplay, { passive: false });
-    window.addEventListener('keydown', function(e) {
-      if (autoplayDone || autoplayRunning) return;
-      if (['ArrowDown','PageDown','Space',' ','End','ArrowUp','PageUp','Home'].includes(e.key)) {
-        e.preventDefault();
-        runAutoplay();
-      }
-    });
-    // Also start autoplay after a moment of inactivity — if they just sit there,
-    // the animation will still play itself (optional: comment out if undesired)
-    // setTimeout(function() { if (!autoplayDone) runAutoplay(); }, 6000);
+    window.addEventListener('keydown', keyHandler);
   }
 
   preloadFrames().then(() => {
@@ -1316,7 +1331,6 @@ footer {
     drawFrame(0, true);
 
     if (autoplayDone) {
-      // Skip autoplay, go straight to scrub
       enableScrubMode();
     } else {
       hint.classList.add('visible');
