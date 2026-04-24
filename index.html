@@ -1223,12 +1223,105 @@ footer {
     drawFrame(lastDrawn === -1 ? 0 : lastDrawn);
   });
 
+  /* ═══════════════════════════════════════════════
+     AUTO-PLAY ON FIRST SCROLL
+     First visit: scrolling triggers a one-time autoplay of the animation,
+     then the normal scroll-scrub behaviour takes over.
+     Repeat visits (same session): skip autoplay, go straight to scrub mode.
+  ═══════════════════════════════════════════════ */
+  const AUTOPLAY_DURATION_MS = 2200;
+  let autoplayDone = sessionStorage.getItem('etch_hero_played') === '1';
+  let autoplayRunning = false;
+
+  function lockScroll() {
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  }
+  function unlockScroll() {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }
+
+  function enableScrubMode() {
+    autoplayDone = true;
+    sessionStorage.setItem('etch_hero_played', '1');
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  function runAutoplay() {
+    if (autoplayRunning || autoplayDone) return;
+    autoplayRunning = true;
+    hint.classList.remove('visible');
+    lockScroll();
+
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / AUTOPLAY_DURATION_MS);
+      // Ease-out for nicer finish
+      const eased = 1 - Math.pow(1 - t, 2);
+      const frameIndex = Math.min(FRAME_COUNT - 1, Math.floor(eased * FRAME_COUNT));
+      drawFrame(frameIndex, true);
+
+      // Fade hero text in on the last 15% of the autoplay
+      const heroOpacity = Math.max(0, Math.min(1, (eased - HERO_FADE_AT) / (1 - HERO_FADE_AT)));
+      hero.style.opacity = heroOpacity;
+      if (heroOpacity > 0) {
+        hero.classList.add('visible');
+        navEl.classList.add('visible');
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        // Finish: draw last frame, snap scroll to flipbook end, release scroll
+        drawFrame(FRAME_COUNT - 1, true);
+        hero.style.opacity = 1;
+        hero.classList.add('visible');
+        navEl.classList.add('visible');
+
+        const maxScroll = wrapper.offsetHeight - stableVH;
+        unlockScroll();
+        window.scrollTo(0, maxScroll);
+        autoplayRunning = false;
+        enableScrubMode();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function triggerAutoplay(e) {
+    if (autoplayDone || autoplayRunning) return;
+    if (e && e.cancelable) e.preventDefault();
+    runAutoplay();
+  }
+
+  function attachFirstScrollListeners() {
+    window.addEventListener('wheel', triggerAutoplay, { passive: false });
+    window.addEventListener('touchmove', triggerAutoplay, { passive: false });
+    window.addEventListener('keydown', function(e) {
+      if (autoplayDone || autoplayRunning) return;
+      if (['ArrowDown','PageDown','Space',' ','End','ArrowUp','PageUp','Home'].includes(e.key)) {
+        e.preventDefault();
+        runAutoplay();
+      }
+    });
+    // Also start autoplay after a moment of inactivity — if they just sit there,
+    // the animation will still play itself (optional: comment out if undesired)
+    // setTimeout(function() { if (!autoplayDone) runAutoplay(); }, 6000);
+  }
+
   preloadFrames().then(() => {
     loader.classList.add('loaded');
-    hint.classList.add('visible');
-    drawFrame(0);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // initial position
+    drawFrame(0, true);
+
+    if (autoplayDone) {
+      // Skip autoplay, go straight to scrub
+      enableScrubMode();
+    } else {
+      hint.classList.add('visible');
+      attachFirstScrollListeners();
+    }
   });
 })();
 </script>
