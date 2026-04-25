@@ -162,23 +162,27 @@ nav.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
   50% { transform: rotate(45deg) translateY(6px); }
 }
 
-/* ── Hero (text overlay on last frame — split above/below logo) ── */
+/* ── Hero (text overlay on last frame — text sits just above/below the logo) ── */
 .hero-overlay {
   position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: space-between;
   padding: 0; z-index: 1;
   opacity: 0; transition: opacity 0.3s ease;
   pointer-events: none;
 }
 .hero-overlay.visible { opacity: 1; pointer-events: auto; }
 .hero-top {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, calc(-50% - 22vh));   /* sits just above the centered logo */
   display: flex; flex-direction: column; align-items: center;
-  padding-top: 100px; text-align: center;
+  text-align: center; padding: 0 24px; width: 100%;
 }
 .hero-bottom {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, calc(-50% + 22vh));   /* sits just below the centered logo */
   display: flex; flex-direction: column; align-items: center;
-  padding-bottom: 60px; text-align: center;
+  text-align: center; padding: 0 24px; width: 100%; max-width: 720px;
 }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 8px;
@@ -675,8 +679,8 @@ footer {
 
   /* Hero overlay */
   .hero-overlay { padding: 0; }
-  .hero-top { padding-top: 80px; padding-left: 20px; padding-right: 20px; }
-  .hero-bottom { padding-bottom: 40px; padding-left: 20px; padding-right: 20px; }
+  .hero-top    { transform: translate(-50%, calc(-50% - 16vh)); padding: 0 16px; }
+  .hero-bottom { transform: translate(-50%, calc(-50% + 16vh)); padding: 0 16px; }
   .hero-logo { font-size: clamp(48px, 14vw, 80px); }
   .hero-tagline { font-size: clamp(16px, 4.5vw, 22px); }
   .hero-desc { font-size: 14px; padding: 0 8px; margin-bottom: 20px; }
