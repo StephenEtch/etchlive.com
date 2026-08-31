@@ -1,0 +1,17 @@
+{
+  "name": "Playback Track Diff",
+  "short_name": "Track Diff",
+  "description": "Compare two versions of a show playback track: reads the LTC stripe off both files and reports every insert, cut and loop, and whether the audio still lands on the timecode your cues are programmed to.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F131A",
+  "theme_color": "#0F131A",
+  "orientation": "any",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
