@@ -1,7 +1,7 @@
 /* Playback Track Diff — offline cache.
    The whole tool is one HTML file, so "offline" just means keeping that file
    and its icons. Nothing else is ever fetched, and no audio touches the network. */
-const CACHE = 'playback-track-diff-v2';
+const CACHE = 'playback-track-diff-v3';
 const SHELL = ['./', './index.html', './manifest.json', './icon-32.png',
                './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 

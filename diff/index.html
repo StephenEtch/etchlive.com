@@ -2725,6 +2725,8 @@ function renderBatchTable(){
 
 function paintMinis(){
   const cols = KEYCOL();
+  const pending = [...document.querySelectorAll('canvas.mini')].some(c => !c.clientWidth);
+  if (pending){ requestAnimationFrame(paintMinis); return; }
   document.querySelectorAll('canvas.mini').forEach(cv => {
     const r = S.batch.find(x => x.id === cv.dataset.mini);
     if (!r || !r.ok) return;
@@ -2863,6 +2865,7 @@ function buildColours(){
 function show(m){
   S.result = m;
   buildColours();
+  goto('detail');
   const v = $('verdict');
   v.className = 'verdict ' + (m.summary.severity === 'bad' ? 'bad' : m.summary.severity === 'warn' ? 'warn' : 'ok');
   $('verdictTitle').textContent = m.summary.title;
@@ -2995,16 +2998,45 @@ let W = 900, H = 360, DPR = 1;
 const PAD = { l: 0, r: 0 };
 const LAY = { ruler: 26, lane: 104, ribbon: 74, gap: 6 };
 
+let sizeTries = 0;
 function resize(){
   const host = $('canvasHost');
+  // Measure the box we are actually painted into. clientWidth reads 0 while the
+  // panel is still hidden, and anything drawn at that size gets stretched by CSS
+  // the moment it appears — which is exactly how the cursor stops matching the
+  // pointer. Never guess a width; wait for a real one.
+  const rect = host.getBoundingClientRect();
+  if (!rect.width){
+    if (sizeTries++ < 120) requestAnimationFrame(resize);
+    return;
+  }
+  sizeTries = 0;
   DPR = Math.min(2, window.devicePixelRatio || 1);
-  W = host.clientWidth || 900;
+  W = rect.width;
   H = LAY.ruler + LAY.lane * 2 + LAY.ribbon + LAY.gap * 3 + 22;
-  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.width = Math.max(1, Math.round(W * DPR));
+  cv.height = Math.max(1, Math.round(H * DPR));
   cv.style.height = H + 'px';
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // derive the transform from the real backing store, so a fractional layout
+  // width cannot introduce even a sub-pixel drift between drawing and pointing
+  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
   draw();
 }
+
+/* Re-measure whenever the box changes for any reason: the panel appearing, the
+   window resizing, a scrollbar arriving, fonts landing, the sidebar opening. */
+if (window.ResizeObserver){
+  new ResizeObserver(() => { if (S.result && S.screen === 'detail') resize(); }).observe($('canvasHost'));
+}
+/* ...and when the window is dragged onto a display with a different pixel ratio. */
+let dprWatch = null;
+function watchDPR(){
+  if (dprWatch) dprWatch.removeEventListener('change', onDPR);
+  dprWatch = matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+  dprWatch.addEventListener('change', onDPR);
+}
+function onDPR(){ watchDPR(); if (S.result) resize(); }
+watchDPR();
 window.addEventListener('resize', () => { if (S.result) resize(); });
 
 function spanOf(){
