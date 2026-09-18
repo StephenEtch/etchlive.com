@@ -1,1 +1,1497 @@
-placeholder - replaced on next commit
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body>
+<title>Dotfield</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --void:#000000;
+    --panel:#0d1012;
+    --panel-2:#14181b;
+    --raise:#1c2226;
+    --line:#272e33;
+    --line-soft:#1e2529;
+    --text:#e8ecee;
+    --muted:#818c93;
+    --amber:#f2b441;
+    --amber-dim:#8a6520;
+    --rec:#e2564a;
+    --pad:18px;
+    --radius:3px;
+    font-synthesis-weight:none;
+  }
+  *{box-sizing:border-box;}
+  [hidden]{display:none!important;}
+  body{
+    margin:0;
+    overflow:hidden;
+    height:100vh;
+    background:var(--void);
+    color:var(--text);
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:13px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .frame{
+    position:fixed;top:10px;left:12px;right:340px;bottom:60px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--void);
+  }
+  body.hideui .frame{top:0;left:0;right:0;bottom:0;}
+  body.hideui .rail,body.hideui .dock{display:none;}
+  #showBtn{
+    position:fixed;top:10px;right:12px;z-index:9;
+    font:inherit;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);padding:8px 13px;cursor:pointer;
+    opacity:.35;transition:opacity .15s,color .15s;
+  }
+  #showBtn:hover{opacity:1;color:var(--text);}
+  #showBtn:focus-visible{outline:2px solid var(--amber);outline-offset:2px;opacity:1;}
+  .ctl.dim label,.ctl.dim .val,.ctl.dim .top{opacity:.45;}
+  canvas{display:block;max-width:100%;max-height:100%;}
+
+  .glass{
+    background:rgba(13,16,18,.52);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:6px;
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+  .wordmark{
+    font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:-0.015em;
+    margin:0;
+    flex:none;
+  }
+  .wordmark span{color:var(--amber);}
+  .readout{
+    color:var(--muted);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    font-variant-numeric:tabular-nums;
+    display:flex;
+    gap:14px;
+    align-items:center;
+  }
+  .dot-live{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--line);
+    display:inline-block;
+    margin-right:6px;
+    vertical-align:baseline;
+  }
+  .dot-live.on{background:var(--amber);box-shadow:0 0 8px rgba(242,180,65,.7);}
+  .dot-live.rec{background:var(--rec);box-shadow:0 0 8px rgba(226,86,74,.7);animation:pulse 1s steps(1) infinite;}
+  @keyframes pulse{50%{opacity:.25}}
+  kbd{
+    font:inherit;
+    border:1px solid var(--line);
+    border-bottom-width:2px;
+    border-radius:2px;
+    padding:1px 5px;
+    color:var(--text);
+  }
+
+  .dock{
+    position:fixed;left:12px;right:340px;bottom:10px;z-index:6;
+    display:flex;align-items:center;gap:9px;
+    padding:8px 11px;
+  }
+  .dockmid{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+  .dockmid .note{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dock .readout{flex:none;}
+  .dock button.act{padding:9px 13px;flex:none;}
+
+  /* ---------- rail ---------- */
+  .rail{
+    position:fixed;top:10px;right:12px;bottom:62px;width:316px;z-index:6;
+    overflow-y:auto;overscroll-behavior:contain;
+    padding:4px 14px 12px;
+    display:flex;
+    flex-direction:column;
+  }
+  .rail::-webkit-scrollbar{width:8px;}
+  .rail::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:4px;}
+  .rail::-webkit-scrollbar-track{background:transparent;}
+  details.group{border-bottom:1px solid rgba(255,255,255,.07);}
+  details.group:last-of-type{border-bottom:0;}
+  details.group[open]{padding-bottom:6px;}
+  .group > summary{
+    margin:0;
+    font-family:Archivo,Arial,sans-serif;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding:12px 0;
+    cursor:pointer;
+    list-style:none;
+    display:flex;justify-content:space-between;align-items:center;
+    user-select:none;
+  }
+  .group > summary::-webkit-details-marker{display:none;}
+  .group > summary::after{content:"\25B8";font-family:inherit;font-size:9px;color:var(--muted);transition:transform .15s;}
+  details[open].group > summary::after{transform:rotate(90deg);}
+  .group > summary:hover{color:var(--text);}
+  .group > summary:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+  details.group > *:not(summary){margin:0 0 13px;}
+  details.group > *:not(summary):last-child{margin-bottom:2px;}
+  #solidCtls{display:flex;flex-direction:column;gap:13px;border:0;padding:0;}
+  #solidCtls > *{margin:0;}
+  .ctl{display:flex;flex-direction:column;gap:7px;}
+  .ctl .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .ctl label{font-size:12px;letter-spacing:0.02em;}
+  .val{
+    color:var(--amber);
+    font-variant-numeric:tabular-nums;
+    font-weight:500;
+    font-size:12px;
+  }
+  .val small{color:var(--muted);font-size:10px;font-weight:400;margin-left:2px;}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;background:transparent;margin:0;height:16px;cursor:ew-resize;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:2px;background:var(--line);border-radius:2px;
+  }
+  input[type=range]::-moz-range-track{height:2px;background:var(--line);border-radius:2px;}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:13px;height:13px;margin-top:-5.5px;border-radius:50%;
+    background:var(--text);border:0;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px;height:13px;border-radius:50%;background:var(--text);border:0;
+  }
+  input[type=range]:hover::-webkit-slider-thumb{background:var(--amber);}
+  input[type=range]:hover::-moz-range-thumb{background:var(--amber);}
+  input[type=range]:focus-visible{outline:2px solid var(--amber);outline-offset:4px;border-radius:2px;}
+
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .tile{
+    font:inherit;font-size:10.5px;letter-spacing:0.04em;
+    color:var(--muted);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:9px 4px 7px;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    cursor:pointer;
+    transition:color .12s,border-color .12s,background .12s;
+  }
+  .tile svg{display:block;}
+  .tile svg circle{fill:currentColor;}
+  .tile:hover{color:var(--text);border-color:#3a444a;}
+  .tile[aria-pressed=true]{color:var(--amber);border-color:var(--amber-dim);background:var(--raise);}
+  .tile:disabled{opacity:.32;cursor:not-allowed;}
+  .tile:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+
+  .transport{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  button.act{
+    font:inherit;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;
+    padding:11px 8px;border-radius:var(--radius);cursor:pointer;
+    border:1px solid var(--line);background:var(--raise);color:var(--text);
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:background .12s,border-color .12s,color .12s;
+  }
+  button.act:hover:not(:disabled){border-color:#454f56;background:#232a2f;}
+  button.act:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+  button.act:disabled{opacity:.38;cursor:not-allowed;}
+  button.act.primary{background:var(--amber);border-color:var(--amber);color:#100c02;font-weight:600;}
+  button.act.primary:hover:not(:disabled){background:#ffc65a;border-color:#ffc65a;}
+  button.act svg{display:block;}
+
+  .segmented{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .segmented.p3{grid-template-columns:repeat(3,1fr);}
+  .segmented.p2{grid-template-columns:repeat(2,1fr);}
+  .colors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .colorwell{display:flex;flex-direction:column;gap:5px;font-size:10.5px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;}
+  .colorwell input{-webkit-appearance:none;appearance:none;width:100%;height:30px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:3px;cursor:pointer;}
+  .colorwell input::-webkit-color-swatch-wrapper{padding:0;}
+  .colorwell input::-webkit-color-swatch{border:none;border-radius:2px;}
+  .colorwell input::-moz-color-swatch{border:none;border-radius:2px;}
+  .colorwell input:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+  input[type=range]:disabled{opacity:.32;cursor:not-allowed;}
+  .dims{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;color:var(--muted);}
+  .dims input{font:inherit;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px 4px;width:100%;text-align:center;font-variant-numeric:tabular-nums;-moz-appearance:textfield;}
+  .dims input::-webkit-outer-spin-button,.dims input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .dims input:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+  .seg{
+    font:inherit;font-size:11px;padding:7px 2px;cursor:pointer;
+    background:var(--panel);color:var(--muted);
+    border:1px solid var(--line);border-radius:var(--radius);
+    font-variant-numeric:tabular-nums;
+  }
+  .seg:hover{color:var(--text);}
+  .seg[aria-pressed=true]{color:var(--amber);border-color:var(--amber-dim);background:var(--raise);}
+  .seg:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+  .seg:disabled,.dims input:disabled{opacity:.38;cursor:not-allowed;}
+
+  .meter{height:2px;background:var(--line);border-radius:2px;overflow:hidden;}
+  .meter i{display:block;height:100%;width:0;background:var(--rec);transition:width .1s linear;}
+  .note{color:var(--muted);font-size:11px;line-height:1.5;margin:0;}
+  .note.warn{color:var(--amber);}
+  .hidden{display:none !important;}
+
+  @media (max-width:880px){
+    .rail{width:262px;}
+    .dock{right:286px;flex-wrap:wrap;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .dot-live.rec{animation:none;}
+  }
+</style>
+
+<div class="frame" id="frame">
+  <canvas id="c" width="1920" height="1080"></canvas>
+</div>
+
+<aside class="rail glass">
+    <details class="group">
+      <summary>Canvas</summary>
+      <div class="segmented p3" id="presets" role="group" aria-label="Canvas size presets"></div>
+      <div class="dims">
+        <input type="number" id="cw" min="320" max="8192" step="1" value="1920" aria-label="Canvas width in pixels">
+        <span>&times;</span>
+        <input type="number" id="ch" min="320" max="8192" step="1" value="1080" aria-label="Canvas height in pixels">
+      </div>
+    </details>
+
+    <details class="group" open>
+      <summary>Field</summary>
+      <div class="segmented p2" id="renderMode" role="group" aria-label="Render mode"></div>
+      <div class="group" id="solidCtls" hidden>
+        <div class="ctl">
+          <div class="top"><label id="shapeLabel">Shape</label></div>
+          <div class="segmented p3" id="shapeSeg" role="group" aria-labelledby="shapeLabel"></div>
+        </div>
+        <div class="ctl">
+          <div class="top"><label id="fillLabel">Fill</label></div>
+          <div class="segmented p2" id="fillSeg" role="group" aria-labelledby="fillLabel"></div>
+        </div>
+        <div class="ctl">
+          <div class="top"><label for="ssize">Size</label><span class="val" id="ssizeVal">100<small>%</small></span></div>
+          <input type="range" id="ssize" min="5" max="100" step="1" value="100">
+        </div>
+        <div class="ctl">
+          <div class="top"><label for="swidth">Width</label><span class="val" id="swidthVal">12<small>%</small></span></div>
+          <input type="range" id="swidth" min="1" max="60" step="1" value="12">
+        </div>
+        <div class="ctl">
+          <div class="top"><label for="sopacity">Opacity</label><span class="val" id="sopacityVal">100<small>%</small></span></div>
+          <input type="range" id="sopacity" min="5" max="100" step="1" value="100">
+        </div>
+      </div>
+      <div class="ctl" data-dotctl>
+        <div class="top"><label for="count">Number of dots</label><span class="val" id="countVal">120</span></div>
+        <input type="range" id="count" min="1" max="600" step="1" value="120">
+      </div>
+      <div class="ctl" data-dotctl>
+        <div class="top"><label for="size">Dot size</label><span class="val" id="sizeVal">10<small>px</small></span></div>
+        <input type="range" id="size" min="1" max="60" step="1" value="10">
+      </div>
+      <div class="ctl" data-dotctl>
+        <div class="top"><label for="jitter">Size variation</label><span class="val" id="jitterVal">0<small>%</small></span></div>
+        <input type="range" id="jitter" min="0" max="100" step="5" value="0">
+      </div>
+    </details>
+
+    <details class="group">
+      <summary>Colour</summary>
+      <div class="segmented" id="colorMode" role="group" aria-label="Colour mode"></div>
+      <div class="colors">
+        <label class="colorwell">A<input type="color" id="colA" value="#ffffff"></label>
+        <label class="colorwell">B<input type="color" id="colB" value="#3fa9ff"></label>
+        <label class="colorwell">BG<input type="color" id="colBG" value="#000000"></label>
+      </div>
+      <div class="ctl">
+        <div class="top"><label for="glow">Glow</label><span class="val" id="glowVal">0<small>%</small></span></div>
+        <input type="range" id="glow" min="0" max="100" step="1" value="0">
+      </div>
+    </details>
+
+    <details class="group">
+      <summary>Timing</summary>
+      <div class="ctl">
+        <div class="top"><label id="syncLabel">Sync</label></div>
+        <div class="segmented p2" id="syncSeg" role="group" aria-labelledby="syncLabel"></div>
+      </div>
+      <div class="ctl" id="speedRow">
+        <div class="top"><label for="speed">Speed</label><span class="val" id="speedVal">1.00<small>&times;</small></span></div>
+        <input type="range" id="speed" min="10" max="600" step="5" value="100">
+      </div>
+      <div class="ctl" id="bpmRow" hidden>
+        <div class="top"><label for="bpm">BPM</label><span class="val" id="beatsVal">1<small>beat/cycle</small></span></div>
+        <div class="dims" style="grid-template-columns:1fr 2fr">
+          <input type="number" id="bpm" min="20" max="300" step="1" value="120" aria-label="Beats per minute">
+          <div class="segmented" id="beatsSeg" role="group" aria-label="Beats per cycle"></div>
+        </div>
+      </div>
+      <div class="ctl">
+        <div class="top"><label id="easeLabel">Motion</label></div>
+        <div class="segmented" id="easeSeg" role="group" aria-labelledby="easeLabel"></div>
+      </div>
+      <div class="ctl">
+        <div class="top"><label for="fade">Fade</label><span class="val" id="fadeVal">30<small>%</small></span></div>
+        <input type="range" id="fade" min="0" max="50" step="1" value="30">
+      </div>
+      <p class="note" id="timingNote">Speed sets how quickly each dot completes appear &rarr; hold &rarr; disappear. Fade at 0% snaps them on and off.</p>
+    </details>
+
+    <details class="group" open>
+      <summary>Effect</summary>
+      <div class="tiles" id="fx" role="group" aria-label="Effect"></div>
+    </details>
+
+    <details class="group">
+      <summary>Placement</summary>
+      <div class="tiles" id="tiles" role="group" aria-label="Placement pattern"></div>
+      <div class="ctl" id="gridDims">
+        <div class="top"><label for="gRows">Rows &times; columns</label><span class="val" style="color:var(--muted)">blank = auto</span></div>
+        <div class="dims">
+          <input type="number" id="gRows" min="1" max="200" placeholder="auto" aria-label="Rows">
+          <span>&times;</span>
+          <input type="number" id="gCols" min="1" max="200" placeholder="auto" aria-label="Columns">
+        </div>
+      </div>
+      <p class="note" id="placeNote" hidden>Radiate and Converge set their own paths &mdash; placement doesn't apply while they're active.</p>
+    </details>
+
+    <details class="group" id="exportGroup">
+      <summary>Export video</summary>
+      <div class="ctl">
+        <div class="top"><label id="durLabel">Duration</label><span class="val" id="durVal">10<small>s</small></span></div>
+        <div class="segmented" id="durs" role="group" aria-labelledby="durLabel"></div>
+      </div>
+      <div class="ctl">
+        <div class="top"><label id="fpsLabel">Frame rate</label><span class="val" id="fpsVal">30<small>fps</small></span></div>
+        <div class="segmented" id="fpsSeg" role="group" aria-labelledby="fpsLabel"></div>
+      </div>
+    </details>
+  </aside>
+
+<div class="dock glass">
+  <span class="wordmark">Dotfield<span>.</span></span>
+  <button class="act primary" id="play" aria-label="Play">
+    <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0l10 6-10 6z" fill="currentColor"/></svg>
+    <span id="playLabel">Play</span>
+  </button>
+  <button class="act" id="reseed">Reseed</button>
+  <button class="act" id="record">
+    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>
+    <span id="recLabel">Record clip</span>
+  </button>
+  <div class="dockmid">
+    <div class="meter" id="meterWrap"><i id="meter"></i></div>
+    <p class="note" id="exportNote">Records the live canvas at full resolution, then downloads the video file.</p>
+  </div>
+  <div class="readout">
+    <span><span class="dot-live" id="lamp"></span><span id="state">Stopped</span></span>
+    <span id="clock">00:00.0</span>
+    <span id="framesize">1920 &times; 1080</span>
+  </div>
+  <button class="act" id="hideBtn" title="Hide controls (H)" aria-label="Hide controls">
+    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><line x1="4" y1="20" x2="20" y2="4"/></svg>
+  </button>
+  <button class="act" id="fsBtn" title="Fullscreen (F)" aria-label="Fullscreen">
+    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+  </button>
+</div>
+
+<button id="showBtn" class="glass" hidden title="Show controls (H)">Show controls</button>
+
+<script src="https://cdn.jsdelivr.net/npm/webm-muxer@5.0.3/build/webm-muxer.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var W = 1920, H = 1080;
+  var canvas = document.getElementById("c");
+  var ctx = canvas.getContext("2d", { alpha: false });
+
+  var PATTERNS = [
+    { id: "scatter",  name: "Scatter",  pts: [[18,16],[46,10],[74,22],[30,44],[62,50],[84,42],[14,72],[44,78],[70,70],[88,84]] },
+    { id: "centred",  name: "Centred",  pts: [[50,50],[40,42],[60,44],[44,60],[58,60],[50,34],[34,52],[66,54],[50,66],[70,34]] },
+    { id: "grid",     name: "Grid",     pts: [[22,22],[50,22],[78,22],[22,50],[50,50],[78,50],[22,78],[50,78],[78,78]] },
+    { id: "ring",     name: "Ring",     pts: [[50,14],[75,25],[86,50],[75,75],[50,86],[25,75],[14,50],[25,25]] },
+    { id: "spiral",   name: "Spiral",   pts: [[50,50],[60,46],[64,58],[52,66],[38,60],[36,42],[50,30],[70,32],[80,52],[74,74]] },
+    { id: "bands",    name: "Rows",     pts: [[16,26],[40,26],[64,26],[88,26],[16,50],[40,50],[64,50],[88,50],[16,74],[40,74],[64,74],[88,74]] },
+    { id: "cols",     name: "Columns",  pts: [[25,14],[25,38],[25,62],[25,86],[50,14],[50,38],[50,62],[50,86],[75,14],[75,38],[75,62],[75,86]] },
+    { id: "wave",     name: "Wave",     pts: [[8,50],[20,28],[32,18],[44,30],[56,52],[68,74],[80,80],[92,66]] },
+    { id: "frame",    name: "Frame",    pts: [[14,14],[38,14],[62,14],[86,14],[86,38],[86,62],[86,86],[62,86],[38,86],[14,86],[14,62],[14,38]] },
+    { id: "cross",    name: "Cross",    pts: [[14,14],[32,32],[50,50],[68,68],[86,86],[86,14],[68,32],[32,68],[14,86]] },
+    { id: "sphere",   name: "Sphere",   pts: [[50,10],[74,18],[88,42],[84,66],[64,84],[38,86],[16,70],[12,44],[26,20],[50,50],[64,44],[38,58],[52,32],[46,68]] },
+    { id: "cube",     name: "Cube",     pts: [[22,30],[54,22],[54,54],[22,62],[38,42],[70,34],[70,66],[38,74],[22,46],[54,38],[62,60],[30,68]] }
+  ];
+
+  var state = {
+    count: 120,
+    size: 10,
+    jitter: 0,
+    speed: 1,
+    fade: 0.3,
+    pattern: "scatter",
+    effect: "twinkle",
+    render: "dots",
+    solid: { shape: "circle", fill: "filled", size: 100, width: 12, opacity: 100 },
+    colorMode: "single",
+    colA: "#ffffff",
+    colB: "#3fa9ff",
+    bg: "#000000",
+    glow: 0,
+    sync: "free",
+    bpm: 120,
+    beats: 1,
+    ease: "linear",
+    gridRows: 0,
+    gridCols: 0,
+    exportFps: 30,
+    phase: 0,
+    playing: false,
+    recording: false,
+    elapsed: 0,
+    duration: 10
+  };
+
+  /* ---------- dots ---------- */
+  var dots = [];
+  var blob = { x: 960, y: 540, dir: 0 };
+  var rot3 = { y: 0.6, x: 0.42 };
+
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function gauss() {
+    var u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+  function place(dot) {
+    var n = Math.max(1, state.count), i = dot.i, m = Math.min(W, H);
+    if (state.pattern === "scatter") {
+      dot.x = rnd(0, W); dot.y = rnd(0, H);
+    } else if (state.pattern === "centred") {
+      dot.x = clamp(W / 2 + gauss() * W * 0.13, 0, W);
+      dot.y = clamp(H / 2 + gauss() * H * 0.13, 0, H);
+    } else if (state.pattern === "grid") {
+      var cols = state.gridCols || Math.max(1, Math.round(Math.sqrt(n * (W / H))));
+      var rows = state.gridRows || Math.max(1, Math.ceil(n / cols));
+      var cw = W / cols, ch = H / rows;
+      var cx = (i % cols) + 0.5, cy = Math.floor(i / cols) % rows + 0.5;
+      dot.x = cx * cw; dot.y = cy * ch;
+    } else if (state.pattern === "ring") {
+      var a = (i / n) * Math.PI * 2 + rnd(-0.02, 0.02);
+      var rr = m * 0.4 * rnd(0.96, 1.0);
+      dot.x = W / 2 + Math.cos(a) * rr * 1.0;
+      dot.y = H / 2 + Math.sin(a) * rr;
+    } else if (state.pattern === "spiral") {
+      var t = n === 1 ? 0.5 : i / (n - 1);
+      var ang = t * Math.PI * 2 * 4.5;
+      var rad = t * m * 0.44;
+      dot.x = W / 2 + Math.cos(ang) * rad;
+      dot.y = H / 2 + Math.sin(ang) * rad;
+    } else if (state.pattern === "bands") {
+      var bands = state.gridRows || clamp(Math.round(Math.sqrt(n) * 0.9), 2, 9);
+      var b = i % bands;
+      dot.y = H * (b + 1) / (bands + 1);
+      dot.x = rnd(W * 0.03, W * 0.97);
+    } else if (state.pattern === "cols") {
+      var nc = state.gridCols || clamp(Math.round(Math.sqrt(n) * 0.9), 2, 12);
+      var cc = i % nc;
+      dot.x = W * (cc + 1) / (nc + 1);
+      dot.y = rnd(H * 0.03, H * 0.97);
+    } else if (state.pattern === "wave") {
+      var tw = n === 1 ? 0.5 : i / (n - 1);
+      dot.x = tw * W;
+      dot.y = H / 2 + Math.sin(tw * Math.PI * 3.5) * H * 0.3;
+    } else if (state.pattern === "frame") {
+      var ix = W * 0.06, iy = H * 0.06;
+      var fw = W - 2 * ix, fh = H - 2 * iy;
+      var per = 2 * (fw + fh);
+      var tp = (i / n) * per;
+      if (tp < fw) { dot.x = ix + tp; dot.y = iy; }
+      else if (tp < fw + fh) { dot.x = W - ix; dot.y = iy + (tp - fw); }
+      else if (tp < 2 * fw + fh) { dot.x = W - ix - (tp - fw - fh); dot.y = H - iy; }
+      else { dot.x = ix; dot.y = H - iy - (tp - 2 * fw - fh); }
+    } else if (state.pattern === "cross") {
+      var hn = Math.max(1, Math.floor(n / 2));
+      if (i < hn) {
+        var tc = hn === 1 ? 0.5 : i / (hn - 1);
+        dot.x = W * 0.05 + tc * W * 0.9; dot.y = H * 0.05 + tc * H * 0.9;
+      } else {
+        var rn = Math.max(1, n - hn);
+        var tc2 = rn === 1 ? 0.5 : (i - hn) / (rn - 1);
+        dot.x = W * 0.95 - tc2 * W * 0.9; dot.y = H * 0.05 + tc2 * H * 0.9;
+      }
+    } else if (state.pattern === "sphere") {
+      var k = i + 0.5;
+      var phi = Math.acos(1 - 2 * k / n);
+      var th = Math.PI * (1 + Math.sqrt(5)) * k;
+      dot.p3 = [Math.sin(phi) * Math.cos(th), Math.cos(phi), Math.sin(phi) * Math.sin(th)];
+      project3(dot);
+    } else if (state.pattern === "cube") {
+      var V = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+      var E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+      var ed = E[i % 12];
+      var te = (Math.floor(i / 12) + 0.5) / Math.max(1, Math.ceil(n / 12));
+      var A = V[ed[0]], B = V[ed[1]];
+      dot.p3 = [
+        (A[0] + (B[0] - A[0]) * te) * 0.8,
+        (A[1] + (B[1] - A[1]) * te) * 0.8,
+        (A[2] + (B[2] - A[2]) * te) * 0.8
+      ];
+      project3(dot);
+    }
+    if (!PATTERN3D[state.pattern]) { dot.p3 = null; dot.ps = 1; dot.da = 1; }
+    var j = state.jitter / 100;
+    dot.scale = j > 0 ? 1 + rnd(-j, j) * 0.9 : 1;
+    dot.dur = baseDur() * rnd(0.75, 1.25);
+    dot.dir = rnd(0, 6.2831853);
+  }
+
+  function baseDur() { return state.sync === "bpm" ? (60 / state.bpm) * state.beats : 2.6 / state.speed; }
+  function sp() { return state.sync === "bpm" ? 3.2 / cycleDur() : state.speed; }
+  function easeF(t) {
+    if (state.ease === "in") return t * t;
+    if (state.ease === "out") return 1 - (1 - t) * (1 - t);
+    if (state.ease === "inout") return t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
+    return t;
+  }
+
+  function makeDot(i, seedPhase) {
+    var d = { i: i, x: 0, y: 0, t: seedPhase ? Math.random() : 0, dur: 1, scale: 1 };
+    place(d);
+    return d;
+  }
+
+  function sync(seedPhase) {
+    while (dots.length < state.count) dots.push(makeDot(dots.length, true));
+    if (dots.length > state.count) dots.length = state.count;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].i = i;
+      if (seedPhase) dots[i].t = Math.random();
+      place(dots[i]);
+    }
+  }
+
+  function reseed() {
+    dots = [];
+    for (var i = 0; i < state.count; i++) dots.push(makeDot(i, true));
+    draw();
+  }
+
+  function cycleDur() { return state.sync === "bpm" ? (60 / state.bpm) * state.beats : 3.2 / state.speed; }
+  var RANDOMISH = { scatter: 1, centred: 1, bands: 1, cols: 1 };
+  var PATTERN3D = { sphere: 1, cube: 1 };
+  var WAVE = { pulse: 1, wipeH: 1, wipeV: 1, sweep: 1, radial: 1, chase: 1 };
+  var LIFECYCLE = { twinkle: 1, drift: 1, radiate: 1, converge: 1, orbit: 1 };
+
+  function project3(d) {
+    if (!d.p3) return;
+    var cyr = Math.cos(rot3.y), syr = Math.sin(rot3.y);
+    var cxr = Math.cos(rot3.x), sxr = Math.sin(rot3.x);
+    var x = d.p3[0], y = d.p3[1], z = d.p3[2];
+    var x1 = x * cyr + z * syr, z1 = -x * syr + z * cyr;
+    var y1 = y * cxr - z1 * sxr, z2 = y * sxr + z1 * cxr;
+    var mm = Math.min(W, H), R = mm * 0.36;
+    var sc = 2.6 / (2.6 - z2);
+    d.x = W / 2 + x1 * R * sc;
+    d.y = H / 2 + y1 * R * sc;
+    d.ps = sc;
+    d.da = 0.3 + 0.7 * (z2 + 1) / 2;
+  }
+
+  function edgeR(a) {
+    var c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
+    return Math.min(c > 1e-6 ? (W / 2) / c : 1e9, s > 1e-6 ? (H / 2) / s : 1e9);
+  }
+
+  function step(dt) {
+    var e = state.effect, i, d;
+    state.phase += dt / cycleDur();
+    if (state.render === "solid") {
+      if (e === "drift") {
+        var mv = Math.min(W, H) * 0.16 * sp();
+        blob.dir += rnd(-1.2, 1.2) * dt;
+        blob.x += Math.cos(blob.dir) * mv * dt;
+        blob.y += Math.sin(blob.dir) * mv * dt;
+        if (blob.x < W * 0.12 || blob.x > W * 0.88 || blob.y < H * 0.12 || blob.y > H * 0.88) {
+          blob.dir = Math.atan2(H / 2 - blob.y, W / 2 - blob.x) + rnd(-0.6, 0.6);
+        }
+      }
+      return;
+    }
+    if (e === "twinkle" || e === "drift") {
+      for (i = 0; i < dots.length; i++) {
+        d = dots[i];
+        d.t += dt / d.dur;
+        if (d.t >= 1) { d.t -= Math.floor(d.t); if (e === "twinkle") place(d); }
+      }
+    }
+    if (e === "drift") {
+      var v = Math.min(W, H) * 0.06 * sp();
+      var r = state.size * (H / 1080);
+      for (i = 0; i < dots.length; i++) {
+        d = dots[i];
+        d.dir += rnd(-1.6, 1.6) * dt;
+        d.x += Math.cos(d.dir) * v * dt;
+        d.y += Math.sin(d.dir) * v * dt;
+        if (d.x < -r) d.x += W + 2 * r; else if (d.x > W + r) d.x -= W + 2 * r;
+        if (d.y < -r) d.y += H + 2 * r; else if (d.y > H + r) d.y -= H + 2 * r;
+      }
+    }
+    if (e === "rain") {
+      var vr = H * 0.3 * sp();
+      var rr = state.size * (H / 1080);
+      for (i = 0; i < dots.length; i++) {
+        d = dots[i];
+        d.y += vr * dt;
+        if (d.y > H + rr) { place(d); d.y = -rr; }
+      }
+    }
+    if (e === "radiate" || e === "converge") {
+      for (i = 0; i < dots.length; i++) {
+        d = dots[i];
+        d.t += dt / d.dur;
+        if (d.t >= 1) {
+          d.t -= Math.floor(d.t);
+          d.dir = rnd(0, 6.2831853);
+          d.dur = baseDur() * rnd(0.75, 1.25);
+        }
+        var prog = easeF(e === "radiate" ? d.t : 1 - d.t);
+        var er = edgeR(d.dir);
+        d.x = W / 2 + Math.cos(d.dir) * er * prog;
+        d.y = H / 2 + Math.sin(d.dir) * er * prog;
+      }
+    }
+    if (PATTERN3D[state.pattern] && e !== "radiate" && e !== "converge") {
+      rot3.y += 0.45 * sp() * dt;
+      rot3.x += 0.09 * sp() * dt;
+      for (i = 0; i < dots.length; i++) project3(dots[i]);
+    }
+    if (e === "orbit") {
+      var om = 0.6 * sp() * dt;
+      var co = Math.cos(om), so = Math.sin(om);
+      for (i = 0; i < dots.length; i++) {
+        d = dots[i];
+        var ox = d.x - W / 2, oy = d.y - H / 2;
+        d.x = W / 2 + ox * co - oy * so;
+        d.y = H / 2 + ox * so + oy * co;
+        d.t += dt / d.dur;
+        if (d.t >= 1) { d.t -= Math.floor(d.t); place(d); }
+      }
+    }
+  }
+
+  function bandAlpha(dist, half) {
+    if (half <= 0) return dist < 1 ? 1 : 0;
+    var a = 1 - dist / half;
+    return a > 0 ? a * a : 0;
+  }
+
+  function dotAlpha(d) {
+    var e = state.effect;
+    if (LIFECYCLE[e]) return alphaOf(d.t);
+    var P = easeF(state.phase - Math.floor(state.phase));
+    if (e === "pulse") return alphaOf(P);
+    var m = Math.min(W, H);
+    var half = m * (0.025 + state.fade * 0.9);
+    if (e === "wipeH") {
+      var bx = P * (W + 4 * half) - 2 * half;
+      return bandAlpha(Math.abs(d.x - bx), half);
+    }
+    if (e === "wipeV") {
+      var by = P * (H + 4 * half) - 2 * half;
+      return bandAlpha(Math.abs(d.y - by), half);
+    }
+    if (e === "sweep") {
+      var sx = (1 - Math.abs(2 * P - 1)) * W;
+      return bandAlpha(Math.abs(d.x - sx), half);
+    }
+    if (e === "radial") {
+      var maxR = Math.hypot(W, H) / 2 + 2 * half;
+      var rd = Math.hypot(d.x - W / 2, d.y - H / 2);
+      return bandAlpha(Math.abs(rd - P * maxR), half);
+    }
+    if (e === "chase") {
+      var n = dots.length || 1;
+      var tail = Math.max(1, n * Math.max(0.02, state.fade * 0.8));
+      var dist = P * n - d.i;
+      dist -= Math.floor(dist / n) * n;
+      return dist <= tail ? 1 - dist / (tail + 0.001) : 0;
+    }
+    if (e === "rain") {
+      var edge = H * Math.max(0.02, state.fade * 0.8);
+      return clamp(Math.min(d.y / edge, (H - d.y) / edge, 1), 0, 1);
+    }
+    return 1;
+  }
+
+  function alphaOf(t) {
+    var f = state.fade;
+    if (f <= 0.001) return 1;
+    if (t < f) return t / f;
+    if (t > 1 - f) return (1 - t) / f;
+    return 1;
+  }
+
+  function drawSolid() {
+    ctx.fillStyle = state.bg;
+    ctx.fillRect(0, 0, W, H);
+    var SC = state.solid;
+    var e = state.effect, P = easeF(state.phase - Math.floor(state.phase));
+    var f = state.fade, m = Math.min(W, H), cx = W / 2, cy = H / 2;
+    var diag = Math.hypot(W, H) / 2;
+    var Z = SC.size / 100, Wd = SC.width / 100;
+    var baseHalf = m * Z * 0.5;
+    var strokeW = Math.max(1.5, Wd * m * 0.5);
+    var blur = f > 0.01 ? f * m * 0.12 : 0;
+    ctx.save();
+    if (blur > 0.4 && typeof ctx.filter === "string") ctx.filter = "blur(" + blur.toFixed(1) + "px)";
+    ctx.globalAlpha = SC.opacity / 100;
+    var style;
+    if (state.colorMode === "duo") {
+      style = ctx.createLinearGradient(0, 0, W, 0);
+      style.addColorStop(0, state.colA);
+      style.addColorStop(1, state.colB);
+    } else if (state.colorMode === "rainbow") {
+      style = ctx.createLinearGradient(0, 0, W, 0);
+      for (var kk = 0; kk <= 6; kk++) style.addColorStop(kk / 6, "hsl(" + kk * 60 + ",100%,60%)");
+    } else if (state.colorMode === "cycle") {
+      style = "hsl(" + Math.round((state.phase * 60) % 360) + ",100%,60%)";
+    } else {
+      style = state.colA;
+    }
+    ctx.fillStyle = style;
+    ctx.strokeStyle = style;
+    if (state.glow > 0) {
+      ctx.shadowBlur = (state.glow / 100) * m * 0.1;
+      ctx.shadowColor = typeof style === "string" ? style : state.colA;
+    }
+
+    function form(x, y, half, forceOutline) {
+      if (half <= 0.5) return;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.beginPath();
+      if (SC.shape === "circle") ctx.arc(0, 0, half, 0, 6.2831853);
+      else if (SC.shape === "square") ctx.rect(-half, -half, half * 2, half * 2);
+      else { ctx.moveTo(0, -half); ctx.lineTo(half, 0); ctx.lineTo(0, half); ctx.lineTo(-half, 0); ctx.closePath(); }
+      if (forceOutline || SC.fill === "outline") { ctx.lineWidth = strokeW; ctx.stroke(); }
+      else ctx.fill();
+      ctx.restore();
+    }
+
+    if (e === "pulse" || e === "twinkle") {
+      ctx.globalAlpha = (SC.opacity / 100) * alphaOf(P);
+      form(cx, cy, baseHalf);
+    } else if (e === "wipeH" || e === "sweep") {
+      var half = Math.max(2, W * Wd * 0.5);
+      var bx = e === "sweep" ? (1 - Math.abs(2 * P - 1)) * W : P * (W + 2 * half + blur * 4) - half - blur * 2;
+      ctx.fillRect(bx - half, -blur * 2, half * 2, H + blur * 4);
+    } else if (e === "wipeV") {
+      var halfv = Math.max(2, H * Wd * 0.5);
+      var by = P * (H + 2 * halfv + blur * 4) - halfv - blur * 2;
+      ctx.fillRect(-blur * 2, by - halfv, W + blur * 4, halfv * 2);
+    } else if (e === "rain") {
+      var yE = P * (H + blur * 4) - blur * 2;
+      if (yE > 0) ctx.fillRect(-blur * 2, -blur * 2, W + blur * 4, yE + blur * 2);
+    } else if (e === "radial") {
+      form(cx, cy, P * (diag * Z + strokeW * 2) - strokeW, true);
+    } else if (e === "radiate") {
+      form(cx, cy, P * (diag * Z + blur * 2));
+    } else if (e === "converge") {
+      form(cx, cy, (1 - P) * (diag * Z + blur * 2));
+    } else if (e === "chase") {
+      var aw = 0.15 + Wd * 2.6;
+      ctx.translate(cx, cy);
+      ctx.rotate(P * 6.2831853);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, diag + 4, -aw / 2, aw / 2);
+      ctx.closePath();
+      ctx.fill();
+    } else if (e === "orbit") {
+      var oa = P * 6.2831853;
+      form(cx + Math.cos(oa) * m * 0.33, cy + Math.sin(oa) * m * 0.33, baseHalf * 0.4);
+    } else if (e === "drift") {
+      blob.x = clamp(blob.x, 0, W); blob.y = clamp(blob.y, 0, H);
+      form(blob.x, blob.y, baseHalf * 0.5);
+    }
+    ctx.restore();
+  }
+
+  function dotColor(d, n) {
+    var cm = state.colorMode;
+    if (cm === "duo") return d.i % 2 ? state.colB : state.colA;
+    if (cm === "rainbow") return "hsl(" + Math.round(d.i / Math.max(1, n) * 360) + ",100%,62%)";
+    if (cm === "cycle") return "hsl(" + Math.round((state.phase * 60) % 360) + ",100%,62%)";
+    return state.colA;
+  }
+
+  function draw() {
+    if (state.render === "solid") { drawSolid(); return; }
+    ctx.fillStyle = state.bg;
+    ctx.fillRect(0, 0, W, H);
+    var base = (state.size / 2) * (H / 1080);
+    var e = state.effect;
+    var n = dots.length;
+    var single = state.colorMode === "single" || state.colorMode === "cycle";
+    var glowPx = state.glow > 0 ? (state.glow / 100) * base * 5 + 2 : 0;
+    var respawns = state.playing && RANDOMISH[state.pattern] && WAVE[e];
+    ctx.fillStyle = dotColor(dots[0] || { i: 0 }, n);
+    if (glowPx) { ctx.shadowBlur = glowPx; ctx.shadowColor = ctx.fillStyle; }
+    for (var i = 0; i < dots.length; i++) {
+      var d = dots[i];
+      var a = dotAlpha(d) * (d.da || 1);
+      if (a <= 0.008) {
+        if (respawns && d.lit) { place(d); }
+        d.lit = false;
+        continue;
+      }
+      if (a > 0.5) d.lit = true;
+      var r = base * d.scale * (d.ps || 1);
+      if (r < 0.35) r = 0.35;
+      if (!single) {
+        ctx.fillStyle = dotColor(d, n);
+        if (glowPx) ctx.shadowColor = ctx.fillStyle;
+      }
+      ctx.globalAlpha = a;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, r, 0, 6.2831853);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
+
+  /* ---------- loop ---------- */
+  var last = 0, raf = null;
+
+  function frame(now) {
+    raf = requestAnimationFrame(frame);
+    var dt = last ? (now - last) / 1000 : 0;
+    last = now;
+    if (dt > 0.25) dt = 0.25;
+    if (state.playing) {
+      state.elapsed += dt;
+      step(dt);
+      draw();
+      clockEl.textContent = fmtClock(state.elapsed);
+    }
+  }
+
+  function fmtClock(s) {
+    var m = Math.floor(s / 60);
+    var sec = s - m * 60;
+    return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec.toFixed(1);
+  }
+
+  /* ---------- ui ---------- */
+  var lamp = document.getElementById("lamp");
+  var stateEl = document.getElementById("state");
+  var clockEl = document.getElementById("clock");
+  var playBtn = document.getElementById("play");
+  var playLabel = document.getElementById("playLabel");
+
+  function setPlaying(on) {
+    state.playing = on;
+    playLabel.textContent = on ? "Stop" : "Play";
+    playBtn.setAttribute("aria-label", on ? "Stop" : "Play");
+    playBtn.querySelector("svg").innerHTML = on
+      ? '<rect x="0" y="0" width="10" height="12" fill="currentColor"/>'
+      : '<path d="M0 0l10 6-10 6z" fill="currentColor"/>';
+    if (!state.recording) {
+      stateEl.textContent = on ? "Running" : "Stopped";
+      lamp.className = "dot-live" + (on ? " on" : "");
+    }
+    last = 0;
+  }
+
+  function bindSlider(id, valId, apply, fmt) {
+    var input = document.getElementById(id);
+    var out = document.getElementById(valId);
+    function upd() {
+      apply(parseFloat(input.value));
+      out.innerHTML = fmt(parseFloat(input.value));
+      if (!state.playing) draw();
+    }
+    input.addEventListener("input", upd);
+    upd();
+  }
+
+  bindSlider("count", "countVal", function (v) {
+    state.count = v; sync(true);
+  }, function (v) { return v; });
+
+  bindSlider("size", "sizeVal", function (v) { state.size = v; },
+    function (v) { return v + '<small>px</small>'; });
+
+  bindSlider("jitter", "jitterVal", function (v) {
+    state.jitter = v;
+    for (var i = 0; i < dots.length; i++) {
+      var j = v / 100;
+      dots[i].scale = j > 0 ? 1 + rnd(-j, j) * 0.9 : 1;
+    }
+  }, function (v) { return v + '<small>%</small>'; });
+
+  bindSlider("speed", "speedVal", function (v) {
+    state.speed = v / 100;
+    for (var i = 0; i < dots.length; i++) dots[i].dur = baseDur() * rnd(0.75, 1.25);
+  }, function (v) { return (v / 100).toFixed(2) + '<small>&times;</small>'; });
+
+  bindSlider("fade", "fadeVal", function (v) { state.fade = v / 100; },
+    function (v) { return v + '<small>%</small>'; });
+
+  /* pattern tiles */
+  var tiles = document.getElementById("tiles");
+  PATTERNS.forEach(function (p) {
+    var b = document.createElement("button");
+    b.className = "tile";
+    b.type = "button";
+    b.setAttribute("aria-pressed", p.id === state.pattern ? "true" : "false");
+    var svg = '<svg width="34" height="20" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">';
+    p.pts.forEach(function (pt) { svg += '<circle cx="' + pt[0] + '" cy="' + pt[1] + '" r="5"/>'; });
+    svg += "</svg>";
+    b.innerHTML = svg + "<span>" + p.name + "</span>";
+    b.addEventListener("click", function () {
+      state.pattern = p.id;
+      [].forEach.call(tiles.children, function (el) { el.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+      sync(false);
+      refreshAvail();
+      if (!state.playing) draw();
+    });
+    tiles.appendChild(b);
+  });
+
+  /* effect tiles */
+  var HINTS = {
+    twinkle: "Speed sets how quickly each dot completes appear → hold → disappear. Fade at 0% snaps them on and off.",
+    pulse: "All dots breathe in unison. Speed sets the cycle; Fade shapes the ramp.",
+    wipeH: "A band of lit dots sweeps left to right. Speed sets sweep rate; Fade sets band width.",
+    wipeV: "A band of lit dots sweeps top to bottom. Speed sets sweep rate; Fade sets band width.",
+    sweep: "The band bounces side to side, scanner-style. Speed sets rate; Fade sets band width.",
+    radial: "An expanding ring lights up the dots it passes \u2014 dots stay put. For dots that travel outward, use Radiate. Fade sets ring thickness.",
+    chase: "Dots light in sequence along the pattern's order. Speed sets chase rate; Fade sets tail length.",
+    rain: "Dots fall and respawn at the top. Speed sets fall rate; Fade softens the edges.",
+    drift: "Dots wander slowly while twinkling. Speed sets both wander and twinkle rate.",
+    radiate: "Dots travel from the centre out to the edges. Speed sets travel rate; Fade eases them in and out.",
+    converge: "Dots travel from the edges into the centre. Speed sets travel rate; Fade eases them in and out.",
+    orbit: "The whole pattern revolves around the centre while dots twinkle. Speed sets both rates."
+  };
+  var EFFECTS = [
+    { id: "twinkle", name: "Twinkle", pts: [[18,22,1],[48,14,.3],[80,26,.7],[30,55,.5],[64,50,1],[88,60,.3],[16,80,.6],[46,84,1],[74,78,.4]] },
+    { id: "pulse", name: "Pulse", pts: [[25,25,.7],[50,25,.7],[75,25,.7],[25,50,.7],[50,50,.7],[75,50,.7],[25,75,.7],[50,75,.7],[75,75,.7]] },
+    { id: "wipeH", name: "Wipe →", pts: [[15,25,.12],[15,50,.12],[15,75,.12],[38,25,.4],[38,50,.4],[38,75,.4],[60,25,1],[60,50,1],[60,75,1],[84,25,.12],[84,50,.12],[84,75,.12]] },
+    { id: "wipeV", name: "Wipe ↓", pts: [[25,16,.12],[50,16,.12],[75,16,.12],[25,42,.4],[50,42,.4],[75,42,.4],[25,66,1],[50,66,1],[75,66,1],[25,88,.12],[50,88,.12],[75,88,.12]] },
+    { id: "sweep", name: "Sweep", pts: [[14,25,.9],[14,50,.9],[14,75,.9],[38,25,.35],[38,50,.35],[38,75,.35],[62,25,.15],[62,50,.15],[62,75,.15],[86,25,.9],[86,50,.9],[86,75,.9]] },
+    { id: "radial", name: "Ripple", pts: [[50,50,1],[50,16,.5],[74,26,.5],[84,50,.5],[74,74,.5],[50,84,.5],[26,74,.5],[16,50,.5],[26,26,.5]] },
+    { id: "chase", name: "Chase", pts: [[10,50,.1],[23,50,.22],[36,50,.36],[49,50,.52],[62,50,.7],[75,50,.85],[88,50,1]] },
+    { id: "rain", name: "Rain", pts: [[25,18,.25],[25,48,.6],[25,78,1],[50,10,.25],[50,40,.6],[50,70,1],[75,24,.25],[75,54,.6],[75,84,1]] },
+    { id: "drift", name: "Drift", pts: [[22,30,.8],[34,24,.3],[58,18,.8],[70,26,.3],[80,54,.8],[68,62,.3],[34,68,.8],[24,60,.3],[52,46,.55]] },
+    { id: "radiate", name: "Radiate", pts: [[50,50,.25],[50,30,.55],[50,12,1],[66,62,.55],[82,74,1],[34,62,.55],[18,74,1],[68,38,.55],[86,26,1],[32,38,.55],[14,26,1]] },
+    { id: "converge", name: "Converge", pts: [[50,50,1],[50,30,.55],[50,12,.2],[66,62,.55],[82,74,.2],[34,62,.55],[18,74,.2],[68,38,.55],[86,26,.2],[32,38,.55],[14,26,.2]] },
+    { id: "orbit", name: "Orbit", pts: [[50,14,1],[75,25,.8],[86,50,.6],[75,75,.45],[50,86,.3],[25,75,.2],[14,50,.12],[25,25,.06]] }
+  ];
+  var fxEl = document.getElementById("fx");
+  var timingNote = document.getElementById("timingNote");
+  EFFECTS.forEach(function (fx) {
+    var b = document.createElement("button");
+    b.className = "tile";
+    b.type = "button";
+    b.setAttribute("aria-pressed", fx.id === state.effect ? "true" : "false");
+    var svg = '<svg width="34" height="20" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">';
+    fx.pts.forEach(function (pt) { svg += '<circle cx="' + pt[0] + '" cy="' + pt[1] + '" r="5" opacity="' + pt[2] + '"/>'; });
+    svg += "</svg>";
+    b.innerHTML = svg + "<span>" + fx.name + "</span>";
+    b.addEventListener("click", function () {
+      state.effect = fx.id;
+      state.phase = 0;
+      [].forEach.call(fxEl.children, function (el) { el.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+      timingNote.textContent = HINTS[fx.id];
+      refreshAvail();
+      if ((fx.id === "radiate" || fx.id === "converge") && state.fade > 0.1) {
+        var fadeEl = document.getElementById("fade");
+        fadeEl.value = 6;
+        fadeEl.dispatchEvent(new Event("input"));
+      }
+      sync(!!LIFECYCLE[fx.id]);
+      step(0);
+      if (!state.playing) draw();
+    });
+    fxEl.appendChild(b);
+  });
+
+  /* render mode */
+  function setDis(id, ok) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === "INPUT") el.disabled = !ok;
+    else [].forEach.call(el.querySelectorAll("button"), function (b) { b.disabled = !ok; });
+    var host = el.closest ? el.closest(".ctl") : null;
+    if (host) host.classList.toggle("dim", !ok);
+  }
+
+  function refreshAvail() {
+    var solid = state.render === "solid";
+    var e = state.effect;
+    var noPlace = solid || e === "radiate" || e === "converge";
+    [].forEach.call(tiles.children, function (el) { el.disabled = noPlace; });
+    var pn = document.getElementById("placeNote");
+    pn.hidden = !noPlace;
+    pn.textContent = solid
+      ? "Solid mode draws one continuous form \u2014 placement and the dot-field controls don't apply."
+      : "Radiate and Converge set their own paths \u2014 placement doesn't apply while they're active.";
+    document.getElementById("solidCtls").hidden = !solid;
+    [].forEach.call(document.querySelectorAll("[data-dotctl]"), function (el) { el.hidden = solid; });
+
+    /* rows x columns: only for grid-like patterns */
+    var gridRel = !noPlace && (state.pattern === "grid" || state.pattern === "bands" || state.pattern === "cols");
+    setDis("gRows", gridRel);
+    setDis("gCols", gridRel);
+
+    /* motion easing: only where a phase or travel is eased */
+    var easeOK = solid ? e !== "drift"
+      : !(e === "twinkle" || e === "drift" || e === "rain" || e === "orbit");
+    setDis("easeSeg", easeOK);
+
+    /* solid controls per effect */
+    var barLike = e === "wipeH" || e === "wipeV" || e === "sweep" || e === "rain" || e === "chase";
+    var shapeOK = solid && !barLike && e !== "radial";
+    var sizeOK = solid && !barLike;
+    var widthOK = solid && (e === "wipeH" || e === "wipeV" || e === "sweep" || e === "chase" || e === "radial" ||
+      (shapeOK && state.solid.fill === "outline"));
+    setDis("shapeSeg", shapeOK);
+    setDis("fillSeg", shapeOK);
+    setDis("ssize", sizeOK);
+    setDis("swidth", widthOK);
+  }
+  var renderEl = document.getElementById("renderMode");
+  [["dots", "Dots"], ["solid", "Solid"]].forEach(function (rm) {
+    var b = document.createElement("button");
+    b.className = "seg";
+    b.type = "button";
+    b.textContent = rm[1];
+    b.setAttribute("aria-pressed", state.render === rm[0] ? "true" : "false");
+    b.addEventListener("click", function () {
+      state.render = rm[0];
+      [].forEach.call(renderEl.children, function (el) { el.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+      refreshAvail();
+      step(0);
+      if (!state.playing) draw();
+    });
+    renderEl.appendChild(b);
+  });
+
+  /* solid controls */
+  bindSlider("ssize", "ssizeVal", function (v) { state.solid.size = v; },
+    function (v) { return v + '<small>%</small>'; });
+  bindSlider("swidth", "swidthVal", function (v) { state.solid.width = v; },
+    function (v) { return v + '<small>%</small>'; });
+  bindSlider("sopacity", "sopacityVal", function (v) { state.solid.opacity = v; },
+    function (v) { return v + '<small>%</small>'; });
+  function buildSeg(elId, items, get, set) {
+    var host = document.getElementById(elId);
+    items.forEach(function (it) {
+      var b = document.createElement("button");
+      b.className = "seg";
+      b.type = "button";
+      b.textContent = it[1];
+      b.setAttribute("aria-pressed", get() === it[0] ? "true" : "false");
+      b.addEventListener("click", function () {
+        set(it[0]);
+        [].forEach.call(host.children, function (el) { el.setAttribute("aria-pressed", "false"); });
+        b.setAttribute("aria-pressed", "true");
+        refreshAvail();
+        if (!state.playing) draw();
+      });
+      host.appendChild(b);
+    });
+  }
+  buildSeg("shapeSeg", [["circle", "Circle"], ["square", "Square"], ["diamond", "Diamond"]],
+    function () { return state.solid.shape; }, function (v) { state.solid.shape = v; });
+  buildSeg("fillSeg", [["filled", "Filled"], ["outline", "Outline"]],
+    function () { return state.solid.fill; }, function (v) { state.solid.fill = v; });
+
+  /* colour */
+  buildSeg("colorMode", [["single", "Single"], ["duo", "Duo"], ["rainbow", "Rainbw"], ["cycle", "Cycle"]],
+    function () { return state.colorMode; }, function (v) { state.colorMode = v; });
+  ["colA", "colB", "bg"].forEach(function (key, idx) {
+    var el = document.getElementById(["colA", "colB", "colBG"][idx]);
+    el.addEventListener("input", function () {
+      state[key] = el.value;
+      if (!state.playing) draw();
+    });
+  });
+  bindSlider("glow", "glowVal", function (v) { state.glow = v; },
+    function (v) { return v + '<small>%</small>'; });
+
+  /* timing: sync, bpm, ease */
+  buildSeg("syncSeg", [["free", "Free"], ["bpm", "BPM"]],
+    function () { return state.sync; },
+    function (v) {
+      state.sync = v;
+      document.getElementById("speedRow").hidden = v === "bpm";
+      document.getElementById("bpmRow").hidden = v !== "bpm";
+      sync(false);
+    });
+  var bpmEl = document.getElementById("bpm");
+  bpmEl.addEventListener("change", function () {
+    state.bpm = clamp(parseInt(bpmEl.value, 10) || 120, 20, 300);
+    bpmEl.value = state.bpm;
+  });
+  buildSeg("beatsSeg", [["0.5", "\u00bd"], ["1", "1"], ["2", "2"], ["4", "4"]],
+    function () { return String(state.beats); },
+    function (v) {
+      state.beats = parseFloat(v);
+      document.getElementById("beatsVal").innerHTML = (state.beats === 0.5 ? "\u00bd" : state.beats) + '<small>beat/cycle</small>';
+    });
+  buildSeg("easeSeg", [["linear", "Linear"], ["in", "In"], ["out", "Out"], ["inout", "In-out"]],
+    function () { return state.ease; }, function (v) { state.ease = v; });
+
+  /* export fps */
+  buildSeg("fpsSeg", [["24", "24"], ["25", "25"], ["30", "30"], ["60", "60"]],
+    function () { return String(state.exportFps); },
+    function (v) {
+      state.exportFps = parseInt(v, 10);
+      document.getElementById("fpsVal").innerHTML = v + '<small>fps</small>';
+    });
+
+  /* grid rows / cols */
+  var gRowsEl = document.getElementById("gRows");
+  var gColsEl = document.getElementById("gCols");
+  function gridChanged() {
+    state.gridRows = clamp(parseInt(gRowsEl.value, 10) || 0, 0, 200);
+    state.gridCols = clamp(parseInt(gColsEl.value, 10) || 0, 0, 200);
+    sync(false);
+    if (!state.playing) draw();
+  }
+  gRowsEl.addEventListener("change", gridChanged);
+  gColsEl.addEventListener("change", gridChanged);
+
+  /* canvas size */
+  var frameEl = document.getElementById("frame");
+  var framesizeEl = document.getElementById("framesize");
+  var cwEl = document.getElementById("cw");
+  var chEl = document.getElementById("ch");
+  var presetsEl = document.getElementById("presets");
+  var PRESETS = [["1080p", 1920, 1080], ["4K", 3840, 2160], ["6048×2808", 6048, 2808]];
+
+  function setCanvasSize(w, h) {
+    if (state.recording) return;
+    w = clamp(Math.round(w) || W, 320, 8192);
+    h = clamp(Math.round(h) || H, 320, 8192);
+    W = w; H = h;
+    canvas.width = w; canvas.height = h;
+    frameEl.style.aspectRatio = w + "/" + h;
+    framesizeEl.innerHTML = w + " &times; " + h;
+    cwEl.value = w; chEl.value = h;
+    [].forEach.call(presetsEl.children, function (el, i) {
+      el.setAttribute("aria-pressed", (PRESETS[i][1] === w && PRESETS[i][2] === h) ? "true" : "false");
+    });
+    blob.x = w / 2; blob.y = h / 2;
+    sync(false);
+    draw();
+  }
+  PRESETS.forEach(function (p) {
+    var b = document.createElement("button");
+    b.className = "seg"; b.type = "button"; b.textContent = p[0];
+    b.setAttribute("aria-pressed", (p[1] === W && p[2] === H) ? "true" : "false");
+    b.addEventListener("click", function () { setCanvasSize(p[1], p[2]); });
+    presetsEl.appendChild(b);
+  });
+  function dimsChanged() { setCanvasSize(parseFloat(cwEl.value), parseFloat(chEl.value)); }
+  cwEl.addEventListener("change", dimsChanged);
+  chEl.addEventListener("change", dimsChanged);
+
+  playBtn.addEventListener("click", function () { setPlaying(!state.playing); });
+  document.getElementById("reseed").addEventListener("click", reseed);
+
+  document.addEventListener("keydown", function (e) {
+    if (e.target && /input|textarea|select/i.test(e.target.tagName)) {
+      if (e.code !== "Space") return;
+    }
+    if (e.code === "Space") { e.preventDefault(); if (!state.recording) setPlaying(!state.playing); }
+    else if (e.key === "r" || e.key === "R") { if (!state.recording) reseed(); }
+    else if (e.key === "h" || e.key === "H") { setHideUI(!document.body.classList.contains("hideui")); }
+    else if (e.key === "f" || e.key === "F") { document.getElementById("fsBtn").click(); }
+    else if (e.key === "Escape") { setHideUI(false); }
+  });
+
+  /* ---------- export ---------- */
+  var DURS = [5, 10, 15, 30];
+  var dursEl = document.getElementById("durs");
+  var durVal = document.getElementById("durVal");
+  DURS.forEach(function (d) {
+    var b = document.createElement("button");
+    b.className = "seg";
+    b.type = "button";
+    b.textContent = d + "s";
+    b.setAttribute("aria-pressed", d === state.duration ? "true" : "false");
+    b.addEventListener("click", function () {
+      state.duration = d;
+      durVal.innerHTML = d + '<small>s</small>';
+      [].forEach.call(dursEl.children, function (el) { el.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+    });
+    dursEl.appendChild(b);
+  });
+
+  var recBtn = document.getElementById("record");
+  var recLabel = document.getElementById("recLabel");
+  var meter = document.getElementById("meter");
+  var note = document.getElementById("exportNote");
+  var BUDGET_BITS = 8e12; /* local export: effectively uncapped */
+
+  function pickMime() {
+    var big = W * H > 2073600;
+    var candidates = big ? [
+      ["video/webm;codecs=vp9", "webm"],
+      ["video/webm;codecs=vp8", "webm"],
+      ["video/webm", "webm"],
+      ["video/mp4", "mp4"]
+    ] : [
+      ["video/mp4;codecs=avc1.640028", "mp4"],
+      ["video/mp4", "mp4"],
+      ["video/webm;codecs=vp9", "webm"],
+      ["video/webm;codecs=vp8", "webm"],
+      ["video/webm", "webm"]
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(candidates[i][0])) return candidates[i];
+    }
+    return null;
+  }
+
+  function canOffline() {
+    return typeof VideoEncoder !== "undefined" && typeof WebMMuxer !== "undefined";
+  }
+
+  if (!canOffline() && (!window.MediaRecorder || !canvas.captureStream || !pickMime())) {
+    recBtn.disabled = true;
+    note.className = "note warn";
+    note.textContent = "This browser can't record canvas video. Chrome, Edge or Firefox on desktop can.";
+  }
+
+
+  function beginExportUI(labelText) {
+    state.recording = true;
+    recBtn.disabled = true;
+    playBtn.disabled = true;
+    cwEl.disabled = chEl.disabled = true;
+    [].forEach.call(presetsEl.children, function (el) { el.disabled = true; });
+    recLabel.textContent = labelText;
+    lamp.className = "dot-live rec";
+    stateEl.textContent = "Recording";
+    note.className = "note";
+  }
+
+  function endExportUI() {
+    state.recording = false;
+    state.rendering = false;
+    recBtn.disabled = false;
+    playBtn.disabled = false;
+    cwEl.disabled = chEl.disabled = false;
+    [].forEach.call(presetsEl.children, function (el) { el.disabled = false; });
+    recLabel.textContent = "Record clip";
+    meter.style.width = "0%";
+    lamp.className = "dot-live" + (state.playing ? " on" : "");
+    stateEl.textContent = state.playing ? "Running" : "Stopped";
+  }
+
+  function deliverBlob(blob, ext, secs) {
+    var mb = (blob.size / 1048576).toFixed(1);
+    var stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "dotfield-" + W + "x" + H + "-" + stamp + "." + ext;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    note.className = "note";
+    note.textContent = "Downloaded — " + secs + "s, " + mb + " MB, " + W + " × " + H + ".";
+    endExportUI();
+  }
+
+  function vp9Codec() {
+    var a = W * H;
+    var level = a <= 983040 ? "31" : a <= 2228224 ? "41" : a <= 8912896 ? "51" : "60";
+    return "vp09.00." + level + ".08";
+  }
+
+  /* Offline render: step the simulation exactly 1/fps per frame and hand
+     frames straight to the encoder — no realtime constraint, so any
+     resolution the encoder accepts comes out at full, even frame pacing. */
+  function recordOffline() {
+    var secs = state.duration;
+    var fps = state.exportFps;
+    var total = secs * fps;
+    var bitrate = Math.min(Math.round(W * H * fps * 0.045), Math.floor(BUDGET_BITS / secs), 60000000);
+    var target = new WebMMuxer.ArrayBufferTarget();
+    var muxer = new WebMMuxer.Muxer({
+      target: target,
+      video: { codec: "V_VP9", width: W, height: H, frameRate: fps }
+    });
+    var failed = false;
+    var encoder = new VideoEncoder({
+      output: function (chunk, meta) { muxer.addVideoChunk(chunk, meta); },
+      error: function () { failed = true; }
+    });
+    try {
+      encoder.configure({ codec: vp9Codec(), width: W, height: H, bitrate: bitrate, framerate: fps });
+    } catch (err) {
+      note.className = "note warn";
+      note.textContent = "This browser\u2019s encoder refused " + W + " \u00d7 " + H + ". Try a smaller canvas.";
+      return;
+    }
+
+    var wasPlaying = state.playing;
+    beginExportUI("Rendering\u2026");
+    state.playing = false;
+    state.rendering = true;
+    stateEl.textContent = "Rendering";
+    note.textContent = "Rendering " + total + " frames at " + fps + " fps \u2014 large canvases take a while.";
+    var i = 0;
+
+    function fail(msg) {
+      try { encoder.close(); } catch (e2) {}
+      note.className = "note warn";
+      note.textContent = msg;
+      state.playing = wasPlaying;
+      endExportUI();
+    }
+
+    function pump() {
+      if (failed) return fail("Encoding failed at " + W + " \u00d7 " + H + " in this browser. Try a smaller canvas.");
+      if (i >= total) {
+        recLabel.textContent = "Finishing\u2026";
+        encoder.flush().then(function () {
+          muxer.finalize();
+          var blob = new Blob([target.buffer], { type: "video/webm" });
+          state.playing = wasPlaying;
+          if (blob.size < 4096) return fail("The render came out empty. Try a smaller canvas or shorter clip.");
+          deliverBlob(blob, "webm", secs);
+        }).catch(function () { fail("Encoding failed while finishing. Try a smaller canvas."); });
+        return;
+      }
+      if (encoder.encodeQueueSize > 4) { setTimeout(pump, 15); return; }
+      step(1 / fps);
+      draw();
+      var vf = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+      encoder.encode(vf, { keyFrame: i % (fps * 2) === 0 });
+      vf.close();
+      i++;
+      meter.style.width = (i / total * 100).toFixed(1) + "%";
+      if (i % 3 === 0) setTimeout(pump, 0); else pump();
+    }
+    pump();
+  }
+
+  function recordRealtime() {
+    var mime = pickMime();
+    if (!mime) {
+      note.className = "note warn";
+      note.textContent = "No supported recording format at this size in this browser.";
+      return;
+    }
+    var secs = state.duration;
+    var fps = Math.min(60, state.exportFps);
+    var bitrate = Math.min(Math.round(9000000 * (W * H) / 2073600), Math.floor(BUDGET_BITS / secs), 45000000);
+    var stream = canvas.captureStream(fps);
+    var chunks = [];
+    var rec;
+    try {
+      rec = new MediaRecorder(stream, { mimeType: mime[0], videoBitsPerSecond: bitrate });
+    } catch (err) {
+      note.className = "note warn";
+      note.textContent = "Recorder wouldn\u2019t start at " + W + " \u00d7 " + H + " in this browser.";
+      return;
+    }
+
+    var t0 = performance.now();
+    var tick;
+    beginExportUI("Recording");
+    note.textContent = "Keep this tab in front \u2014 recording captures the live canvas.";
+    if (!state.playing) setPlaying(true);
+
+    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = function () {
+      clearInterval(tick);
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      var blob = new Blob(chunks, { type: mime[0] });
+      if (blob.size < 4096) {
+        note.className = "note warn";
+        note.textContent = "The recording came out empty \u2014 this browser couldn\u2019t capture the canvas at " + W + " \u00d7 " + H + ". Chrome, Edge or Firefox on desktop handle it best.";
+        endExportUI();
+        return;
+      }
+      deliverBlob(blob, mime[1], secs);
+    };
+
+    rec.start(250);
+    tick = setInterval(function () {
+      var p = Math.min(1, (performance.now() - t0) / (secs * 1000));
+      meter.style.width = (p * 100).toFixed(1) + "%";
+      if (p >= 1 && rec.state === "recording") {
+        try { rec.requestData(); } catch (e2) {}
+        rec.stop();
+      }
+    }, 100);
+  }
+
+  function record() {
+    if (W * H > 2073600 && canOffline()) return recordOffline();
+    recordRealtime();
+  }
+
+  recBtn.addEventListener("click", record);
+
+  /* view controls */
+  var showBtn = document.getElementById("showBtn");
+  function setHideUI(on) {
+    document.body.classList.toggle("hideui", on);
+    showBtn.hidden = !on;
+  }
+  document.getElementById("hideBtn").addEventListener("click", function () { setHideUI(true); });
+  showBtn.addEventListener("click", function () { setHideUI(false); });
+  document.getElementById("fsBtn").addEventListener("click", function () {
+    if (!document.fullscreenElement) {
+      var pr = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      if (pr && pr.catch) pr.catch(function () {
+        note.className = "note warn";
+        note.textContent = "Fullscreen isn't allowed in this view \u2014 open the page in its own tab.";
+      });
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  });
+
+  /* ---------- boot ---------- */
+  refreshAvail();
+  reseed();
+  raf = requestAnimationFrame(frame);
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduced) setPlaying(true); else setPlaying(false);
+})();
+</script>
+
+</body>
+</html>
